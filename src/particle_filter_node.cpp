@@ -155,8 +155,9 @@ public:
     }
 
     std::vector<bool> getdoorstatus() {
-       // should align with patrticle filter enforce collision lanmarks order
-        return {door_bedroom, door_bathroom, door_livingroom, door_livingroom};
+       // should align with patrticle filter enforce collision lanmarks orderc
+//        bedroom_door, bathroom_door, living_room_door, outside_door
+        return {door_bedroom, door_bathroom, door_livingroom, door_outdoor};
     }
 
     Observation getObservation() {
@@ -325,11 +326,11 @@ public:
         // Loop over the keys of map_cam_aptag using a range-based for loop
         for (const auto &cam: cams) {
             // Get transformation matrix from camera to aptag /// from aptag detection
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf("tag_18_zed", cam);
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf("tag_13_zed", cam);
             std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
 
             // Get transformation matrix from map to waptag
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", "aptag_18");
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", "aptag_13");
             std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
 
             // Get transformation matrix from map to aptag
@@ -521,7 +522,9 @@ int main(int argc, char **argv) {
 //                auto beg = std::chrono::high_resolution_clock::now();
                 auto t_ = node->publish_transform(camera_extrinsics["kitchen"], "unity", "zed_cam");
                 tf_broadcaster_->sendTransform(t_);
-                std::vector<bool> door_status_ = {0,0,0,0,0};
+                // bedroom_door, bathroom_door, living_room_door, outside_door
+//                std::vector<bool> door_status_ = {0,0,0,0};
+                std::vector<bool> door_status_ = node->getdoorstatus();
                 if (!particle_filter.initialized()) {
                     // Initialize the particle filter in a uniform distribution
                     particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
