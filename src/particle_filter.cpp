@@ -64,7 +64,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
 //    std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
 
 //    auto mesh_file = (pkg_dir / "config" / "collision_mesh.obj").string();
-    std::string mesh_file = "/home/olagh/smart-home/src/smart-home/external/particle_filter_mesh/config/collision_mesh.obj";
+    std::string mesh_file = "/home/olagh/smart-home/src/smart-home/external/particle_filter_mesh/config/coll_mesh_-x.obj";
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
@@ -93,24 +93,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     std::cout << " x _before" << particles[0].x << " y_before" << particles[0].y << std::endl;
     write_to_file("before_motion_model.txt");
     for (auto &p: particles) {
-//        double yaw = p.theta;
-//
-//        double delta_x = 0;
-//        double delta_y = 0;
-//        double delta_z = 0;
-//        double delta_yaw = 0;
-//
-//        if (fabs(yaw_rate) < EPSILON) {
-//            delta_x = velocity * delta_t * cos(yaw);
-//            delta_y = velocity * delta_t * sin(yaw);
-//
-//        } else {
-//            double c = velocity / yaw_rate;
-//            delta_x = c * (sin(yaw + yaw_rate * delta_t) - sin(yaw));
-//            delta_y = c * (cos(yaw) - cos(yaw + yaw_rate * delta_t));
-//            delta_yaw = yaw_rate * delta_t;
-//
-//        }
+
         //Add control noise
         double delta_x = xNoise(gen); //* delta_t;
         double delta_y = yNoise(gen);// * delta_t;
@@ -127,12 +110,12 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     std::cout << " x _after" << particles[0].x << " y_after" << particles[0].y << std::endl;
 
     // to be passed in through arguments
-    bool door_open = true;
+    bool door_open = false;
     std::string directoryPath = "/home/ola/Desktop/unity_points/";
     std::string ParamFilename = "network_params.json";
     std::string NetworkFilename = "network_config.json";
     ParticleFilter::enforce_non_collision(particles_before, doors_status);
-    write_to_file("after_motion_model.txt");
+    //write_to_file("after_motion_model.txt");
 
 }
 
@@ -146,13 +129,13 @@ float ParticleFilter::sample(float mean, float variance) {
 
 void ParticleFilter::resample() {
     // low variance resampler
-    write_to_file("before_resampling.txt");
+    //write_to_file("before_resampling.txt");
 
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> dist(0.0, 1.0 / num_particles);
 
-    std::vector <Particle> resampled_particles = particles;
+    std::vector<Particle> resampled_particles = particles;
 
     double c = particles[0].weight;
     int i = 0;
@@ -171,7 +154,7 @@ void ParticleFilter::resample() {
         resampled_particles[m].weight = 1.0 / num_particles;
     }
     particles = resampled_particles;
-    write_to_file("after_resampling.txt");
+//    write_to_file("after_resampling.txt");
 
 //    for (int m = 0; m < num_particles; m++) {
 //        double max_weight = 0.00;
@@ -183,7 +166,7 @@ void ParticleFilter::resample() {
 }
 
 void ParticleFilter::updateWeights(double std_landmark[],
-                                   std::vector <Observation> observations,
+                                   std::vector<Observation> observations,
                                    Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams) {
     // Update the weights of each particle using a multi-variate Gaussian distribution. You can read
 
@@ -191,7 +174,7 @@ void ParticleFilter::updateWeights(double std_landmark[],
     double sigma_y = std_landmark[1];
     double sigma_z = std_landmark[2];
     double weights_sum = 0;
-    write_to_file("before_weight_update.txt");
+//    write_to_file("before_weight_update.txt");
 
 
     Observation current_obs = observations[0]; // TODO be changed when more observations are added
@@ -241,7 +224,7 @@ void ParticleFilter::updateWeights(double std_landmark[],
     for (int i = 0; i < num_particles; i++) {
         particles[i].weight /= weights_sum;
     }
-    write_to_file("after_weight_update.txt");
+//    write_to_file("after_weight_update.txt");
 }
 
 
@@ -254,11 +237,11 @@ bool ParticleFilter::check_particle_at(const std::string &loc, Eigen::Vector3d p
     return shr_utils::PointInMesh(point, verts, verts2d);
 }
 
-void ParticleFilter::enforce_non_collision(const std::vector <Particle> &old_particles,
+void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_particles,
                                            std::vector<bool> doors_status) {
 
-    std::vector <std::string>
-    lndmarks = {"obstacles" , "bedroom_door", "bathroom_door", "living_room_door", "outside_door"};
+    std::vector<std::string>
+    lndmarks = {"walls", "door"};
     for (int i = 0; i < num_particles; ++i) {
         Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
         if (check_particle_at(lndmarks[0], point)) {
@@ -267,30 +250,9 @@ void ParticleFilter::enforce_non_collision(const std::vector <Particle> &old_par
             particles[i].weight = 0.0;
 
         } else if (check_particle_at(lndmarks[1], point)) {
-            // bedroom_door
+            // door
             if (doors_status[0]) {
                 // door 2 closed keep old particles
-                particles[i] = old_particles[i];
-                particles[i].weight = 0.0;
-            }
-        } else if (check_particle_at(lndmarks[2], point)) {
-            // bathroom_door
-            if (doors_status[1]) {
-                // door 1 closed keep old particles
-                particles[i] = old_particles[i];
-                particles[i].weight = 0.0;
-            }
-        } else if (check_particle_at(lndmarks[3], point)) {
-            // living_room_door
-            if (doors_status[2]) {
-                // door 1 closed keep old particles
-                particles[i] = old_particles[i];
-                particles[i].weight = 0.0;
-            }
-        } else if (check_particle_at(lndmarks[4], point)) {
-            // outside_door
-            if (doors_status[3]) {
-                // door 1 closed keep old particles
                 particles[i] = old_particles[i];
                 particles[i].weight = 0.0;
             }

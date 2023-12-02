@@ -75,9 +75,6 @@ private:
 
 //    std::vector<bool> door_status_;
     bool door_outdoor;
-    bool door_livingroom;
-    bool door_bedroom;
-    bool door_bathroom;
 
 
 public:
@@ -99,7 +96,7 @@ public:
 //                [this](const std_msgs::msg::Float64MultiArray::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
         pose_sub_k = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed2i/zed_node/body_trk/skeletons", 1,
+                "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
 
@@ -125,15 +122,7 @@ public:
         auto door_outdoor_sub = create_subscription<detection_msgs::msg::DoorStatus>(
                 "/smartthings_sensors_door_outdoor", 10,
                 [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorOutdoorCallback(msg); });
-        auto door_livingroom_sub = create_subscription<detection_msgs::msg::DoorStatus>(
-                "/smartthings_sensors_door_livingroom", 10,
-                [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorLivingroomCallback(msg); });
-        auto door_bedroom_sub = create_subscription<detection_msgs::msg::DoorStatus>(
-                "/smartthings_sensors_door_bedroom", 10,
-                [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorBedroomCallback(msg); });
-        auto door_bathroom_sub = create_subscription<detection_msgs::msg::DoorStatus>(
-                "/smartthings_sensors_door_bathroom", 10,
-                [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorBathroomCallback(msg); });
+
     }
 
     std::array<double, 4> sigma_pos;
@@ -142,22 +131,11 @@ public:
         door_outdoor = msg->open;
     }
 
-    void DoorLivingroomCallback(const detection_msgs::msg::DoorStatus::SharedPtr &msg) {
-        door_livingroom = msg->open;
-    }
-
-    void DoorBedroomCallback(const detection_msgs::msg::DoorStatus::SharedPtr &msg) {
-        door_bedroom = msg->open;
-    }
-
-    void DoorBathroomCallback(const detection_msgs::msg::DoorStatus::SharedPtr &msg) {
-        door_bathroom = msg->open;
-    }
 
     std::vector<bool> getdoorstatus() {
        // should align with patrticle filter enforce collision lanmarks orderc
-//        bedroom_door, bathroom_door, living_room_door, outside_door
-        return {door_bedroom, door_bathroom, door_livingroom, door_outdoor};
+//        outside_door
+        return { door_outdoor};
     }
 
     Observation getObservation() {
@@ -321,16 +299,16 @@ public:
 //            map_cam_aptag["bedroom"] = "aptag_3";
 //            map_cam_aptag["living"] = "aptag_4";
 //        std::vector<std::string> cams{"dining", "kitchen", "bedroom", "livingroom", "hallway", "doorway"};
-        std::vector<std::string> cams{"zed2i_left_camera_frame"};
+        std::vector<std::string> cams{"zed_kitchen_left_camera_frame"};
 
         // Loop over the keys of map_cam_aptag using a range-based for loop
         for (const auto &cam: cams) {
             // Get transformation matrix from camera to aptag /// from aptag detection
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf("tag_13_zed", cam);
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf("tag_18_zed", cam);
             std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
 
             // Get transformation matrix from map to waptag
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", "aptag_13");
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", "aptag_18");
             std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
 
             // Get transformation matrix from map to aptag
