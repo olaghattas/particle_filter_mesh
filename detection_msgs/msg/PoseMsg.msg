@@ -1,3 +1,0 @@
-string name
-int32 pixel_coordinate_x
-int32 pixel_coordinate_y
