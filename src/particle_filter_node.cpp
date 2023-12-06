@@ -501,8 +501,10 @@ int main(int argc, char **argv) {
                 auto t_ = node->publish_transform(camera_extrinsics["kitchen"], "unity", "zed_cam");
                 tf_broadcaster_->sendTransform(t_);
                 // bedroom_door, bathroom_door, living_room_door, outside_door
-//                std::vector<bool> door_status_ = {0,0,0,0};
-                std::vector<bool> door_status_ = node->getdoorstatus();
+                std::vector<bool> door_status_ = {0};
+                // TODO uncomment when working with sensors
+
+//                std::vector<bool> door_status_ = node->getdoorstatus();
                 if (!particle_filter.initialized()) {
                     // Initialize the particle filter in a uniform distribution
                     particle_filter.init(x_bound, y_bound, z_bound, theta_bound);

@@ -61,10 +61,9 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
     is_initialized = true;
 
 
-//    std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
+    std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
 
-//    auto mesh_file = (pkg_dir / "config" / "collision_mesh.obj").string();
-    std::string mesh_file = "/home/olagh/smart-home/src/smart-home/external/particle_filter_mesh/config/coll_mesh_-x.obj";
+    auto mesh_file = (pkg_dir / "config" / "coll_mesh_-x.obj").string();
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
@@ -111,11 +110,6 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 
     // to be passed in through arguments
     bool door_open = false;
-    std::string directoryPath = "/home/ola/Desktop/unity_points/";
-    std::string ParamFilename = "network_params.json";
-    std::string NetworkFilename = "network_config.json";
-    ParticleFilter::enforce_non_collision(particles_before, doors_status);
-    //write_to_file("after_motion_model.txt");
 
 }
 
