@@ -57,13 +57,11 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         weights.push_back(1);
 
     }
-    write_to_file("first_run.txt");
+    //write_to_file("first_run.txt");
     is_initialized = true;
 
-
     std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
-
-    auto mesh_file = (pkg_dir / "config" / "coll_mesh_-x.obj").string();
+    auto mesh_file = (pkg_dir / "config" / "collsion_lab_211.obj").string();
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
@@ -90,7 +88,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 
     auto particles_before = particles;
     std::cout << " x _before" << particles[0].x << " y_before" << particles[0].y << std::endl;
-    write_to_file("before_motion_model.txt");
+    //write_to_file("before_motion_model.txt");
     for (auto &p: particles) {
 
         //Add control noise
@@ -235,7 +233,7 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
                                            std::vector<bool> doors_status) {
 
     std::vector<std::string>
-    lndmarks = {"walls", "door"};
+    lndmarks = {"obstacles", "door"};
     for (int i = 0; i < num_particles; ++i) {
         Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
         if (check_particle_at(lndmarks[0], point)) {
