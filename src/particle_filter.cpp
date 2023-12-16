@@ -108,6 +108,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 
     // to be passed in through arguments
     bool door_open = false;
+    ParticleFilter::enforce_non_collision(particles_before, doors_status);
 
 }
 
@@ -243,7 +244,7 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
 
         } else if (check_particle_at(lndmarks[1], point)) {
             // door
-            if (doors_status[0]) {
+            if (!doors_status[0]) {
                 // door 2 closed keep old particles
                 particles[i] = old_particles[i];
                 particles[i].weight = 0.0;

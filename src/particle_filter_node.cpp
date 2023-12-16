@@ -120,7 +120,7 @@ public:
 //                        network = check_collision_training(directoryPath, 3);
 //                    }
         auto door_outdoor_sub = create_subscription<detection_msgs::msg::DoorStatus>(
-                "/smartthings_sensors_door_outdoor", 10,
+                "/smartthings_main_sensor_door", 10,
                 [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorOutdoorCallback(msg); });
 
     }
@@ -304,11 +304,11 @@ public:
         // Loop over the keys of map_cam_aptag using a range-based for loop
         for (const auto &cam: cams) {
             // Get transformation matrix from camera to aptag /// from aptag detection
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf("tag_18_zed", cam);
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf("tag_40_zed", cam);
             std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
 
             // Get transformation matrix from map to waptag
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", "aptag_18");
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", "aptag_40");
             std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
 
             // Get transformation matrix from map to aptag
@@ -488,7 +488,7 @@ int main(int argc, char **argv) {
             std::pair<double, double> z_bound = std::make_pair(0, 0);
             std::pair<double, double> theta_bound = std::make_pair(-3.1416, 3.1416);
 
-            int num_particles =  500; // has to be multiple of 128
+            int num_particles =  1000; // has to be multiple of 128
 
             double velocity = 0.01;
             double yaw_rate = 0.5;
@@ -501,10 +501,10 @@ int main(int argc, char **argv) {
                 auto t_ = node->publish_transform(camera_extrinsics["kitchen"], "unity", "zed_cam");
                 tf_broadcaster_->sendTransform(t_);
                 // bedroom_door, bathroom_door, living_room_door, outside_door
-                std::vector<bool> door_status_ = {0};
+//                std::vector<bool> door_status_ = {1};
                 // TODO uncomment when working with sensors
 
-//                std::vector<bool> door_status_ = node->getdoorstatus();
+                std::vector<bool> door_status_ = node->getdoorstatus();
                 if (!particle_filter.initialized()) {
                     // Initialize the particle filter in a uniform distribution
                     particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
