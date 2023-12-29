@@ -39,24 +39,9 @@
 #include "ament_index_cpp/get_package_share_directory.hpp"
 
 #include "zed_interfaces/msg/objects_stamped.hpp"
-//#include "zed_interfaces/msg/bounding_box_3_d.hpp"
 #include "zed_interfaces/msg/bounding_box3_d.hpp"
-//#include "zed_interfaces/msg/keypoints_3_d.hpp"
 #include "zed_interfaces/msg/object.hpp"
-//#include "zed_interfaces/msg/skeleton_3_d.hpp"
 #include "zed_interfaces/msg/pos_track_status.hpp"
-
-//struct TransformData {
-//    double posX;
-//    double posY;
-//    double posZ;
-//    double quatX;
-//    double quatY;
-//    double quatZ;
-//    double quatW;
-//    std::string name;
-//};
-
 
 class ParticleFilterNode : public rclcpp::Node {
 private:
@@ -65,7 +50,7 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_3d_pt;
 //    rclcpp::TimerBase::SharedPtr timer_;
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_k;
+    rclcpp::Subscription<zed_interfaces::msg::Object>::SharedPtr pose_sub_k;
 //    rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr pose_sub_k;
     Observation observation; // Member variable to store the observation
 
@@ -95,9 +80,9 @@ public:
 //                "/body_pose_kitchen" , 1,
 //                [this](const std_msgs::msg::Float64MultiArray::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
-        pose_sub_k = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
+        pose_sub_k = create_subscription<zed_interfaces::msg::Object>(
+                "/kitchen_person_pose", 1,
+                [this](const zed_interfaces::msg::Object::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
 
 
@@ -133,9 +118,9 @@ public:
 
 
     std::vector<bool> getdoorstatus() {
-       // should align with patrticle filter enforce collision lanmarks orderc
+        // should align with patrticle filter enforce collision lanmarks orderc
 //        outside_door
-        return { door_outdoor};
+        return {door_outdoor};
     }
 
     Observation getObservation() {
@@ -162,9 +147,9 @@ public:
 //        }
 //    }
 
-    void PosePixCallback_kitchen(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+    void PosePixCallback_kitchen(const zed_interfaces::msg::Object::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (!msg->objects.empty()) {
+        if (msg) {
 //#      1 ------- 2
 //#     /.        /|
 //#    0 ------- 3 |
@@ -173,29 +158,29 @@ public:
 //#    |.        |/
 //#    4 ------- 7
 
-            if (msg->objects[0].skeleton_available) {
-                observation.name = "kitchen";
+
+        observation.name = "kitchen";
 //                observation.x = msg->objects[0].skeleton_3d.keypoints[1].kp[0];
 //                observation.y = msg->objects[0].skeleton_3d.keypoints[1].kp[1];
 //                observation.z = msg->objects[0].skeleton_3d.keypoints[1].kp[2];
-                zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
-                float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-                for (int i = 0; i < 8; i++) {
-                    sum_x += bounding_box.corners[i].kp[0];
-                    sum_y += bounding_box.corners[i].kp[1];
-                    sum_z += bounding_box.corners[i].kp[2];
-                }
+        zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
+        float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
+        for (int i = 0; i < 8; i++) {
+            sum_x += bounding_box.corners[i].kp[0];
+            sum_y += bounding_box.corners[i].kp[1];
+            sum_z += bounding_box.corners[i].kp[2];
+        }
 
-                // Calculate the centroid
-                observation.x = sum_x / 8.0;
-                observation.y = sum_y / 8.0;
-                observation.z = sum_z / 8.0;
+        // Calculate the centroid
+        observation.x = sum_x / 8.0;
+        observation.y = sum_y / 8.0;
+        observation.z = sum_z / 8.0;
 
-                sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-                sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-                sigma_pos[2] = msg->objects[0].dimensions_3d[2];
-                sigma_pos[3] = 0.1;
-            }
+        sigma_pos[0] = msg->dimensions_3d[0];
+        sigma_pos[1] = msg->dimensions_3d[1];
+        sigma_pos[2] = msg->dimensions_3d[2];
+        sigma_pos[3] = 0.1;
+
         } else {
             std::cout << "no person detected" << std::endl;
             observation.name = "";
@@ -304,11 +289,11 @@ public:
         // Loop over the keys of map_cam_aptag using a range-based for loop
         for (const auto &cam: cams) {
             // Get transformation matrix from camera to aptag /// from aptag detection
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf("tag_40_zed", cam);
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf("tag_45_zed", cam);
             std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
 
             // Get transformation matrix from map to waptag
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", "aptag_40");
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", "aptag_45");
             std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
 
             // Get transformation matrix from map to aptag
@@ -488,7 +473,7 @@ int main(int argc, char **argv) {
             std::pair<double, double> z_bound = std::make_pair(0, 0);
             std::pair<double, double> theta_bound = std::make_pair(-3.1416, 3.1416);
 
-            int num_particles =  1000; // has to be multiple of 128
+            int num_particles = 1000; // has to be multiple of 128
 
             double velocity = 0.01;
             double yaw_rate = 0.5;
