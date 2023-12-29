@@ -40,7 +40,6 @@
 #include "zed_interfaces/msg/objects_stamped.hpp"
 #include "zed_interfaces/msg/bounding_box3_d.hpp"
 #include "zed_interfaces/msg/object.hpp"
-#include "zed_interfaces/msg/pos_track_status.hpp"
 #include <cstdlib>
 
 
@@ -51,9 +50,9 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_3d_pt;
 
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_k;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_lr;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dw;
+    rclcpp::Subscription<zed_interfaces::msg::Object>::SharedPtr pose_sub_k;
+    rclcpp::Subscription<zed_interfaces::msg::Object>::SharedPtr pose_sub_lr;
+    rclcpp::Subscription<zed_interfaces::msg::Object>::SharedPtr pose_sub_dw;
     Observation observation; // Member variable to store the observation
 
     rclcpp::TimerBase::SharedPtr timer_{nullptr};
@@ -63,7 +62,6 @@ private:
 
 //    std::vector<bool> door_status_;
     bool door_outdoor;
-    bool door_livingroom;
     bool door_bedroom;
     bool door_bathroom;
 
@@ -73,7 +71,7 @@ public:
 
         map_cam_aptag["doorway"] = "tag_" + std::string(std::getenv("tag_doorway")) + "_zed";
         map_cam_aptag["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen")) + "_zed";
-        map_cam_aptag["livingroom"] = "tag_" + std::string(std::getenv("tag_livingroom")) + "_zed";
+        map_cam_aptag["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room")) + "_zed";
 
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("marker", 10);
 
@@ -81,25 +79,22 @@ public:
 
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-        pose_sub_k = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
+        pose_sub_k = create_subscription<zed_interfaces::msg::Object>(
+                "/kitchen_person_pose", 1,
+                [this](const zed_interfaces::msg::Object::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
-        pose_sub_lr = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_livingroom/zed_node_livingroom/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_livingroom(msg); });
+        pose_sub_lr = create_subscription<zed_interfaces::msg::Object>(
+                "/dining_room_person_pose", 1,
+                [this](const zed_interfaces::msg::Object::SharedPtr msg) { PosePixCallback_dining_room(msg); });
 
-        pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
+        pose_sub_dw = create_subscription<zed_interfaces::msg::Object>(
+                "/doorway_person_pose", 1,
+                [this](const zed_interfaces::msg::Object::SharedPtr msg) { PosePixCallback_doorway(msg); });
 
 
         auto door_outdoor_sub = create_subscription<detection_msgs::msg::DoorStatus>(
                 "/smartthings_sensors_door_outdoor", 10,
                 [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorOutdoorCallback(msg); });
-        auto door_livingroom_sub = create_subscription<detection_msgs::msg::DoorStatus>(
-                "/smartthings_sensors_door_livingroom", 10,
-                [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorLivingroomCallback(msg); });
         auto door_bedroom_sub = create_subscription<detection_msgs::msg::DoorStatus>(
                 "/smartthings_sensors_door_bedroom", 10,
                 [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorBedroomCallback(msg); });
@@ -114,10 +109,6 @@ public:
         door_outdoor = msg->open;
     }
 
-    void DoorLivingroomCallback(const detection_msgs::msg::DoorStatus::SharedPtr &msg) {
-        door_livingroom = msg->open;
-    }
-
     void DoorBedroomCallback(const detection_msgs::msg::DoorStatus::SharedPtr &msg) {
         door_bedroom = msg->open;
     }
@@ -127,21 +118,20 @@ public:
     }
 
     std::vector<bool> getdoorstatus() {
-        // should align with patrticle filter enforce collision lanmarks orderc
+        // should align with patrticle filter enforce collision landmarks orderc
 //        bedroom_door, bathroom_door, living_room_door, outside_door
-        return {door_bedroom, door_bathroom, door_livingroom, door_outdoor};
+        return {door_bedroom, door_bathroom, door_outdoor};
     }
 
     Observation getObservation() {
         return observation;
     }
 
-    void PosePixCallback_kitchen(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+    void PosePixCallback_kitchen(const zed_interfaces::msg::Object::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (!msg->objects.empty()) {
-            if (msg->objects[0].skeleton_available) {
+        if (msg) {
                 observation.name = "kitchen";
-                zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
+                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
                 float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
                 for (int i = 0; i < 8; i++) {
                     sum_x += bounding_box.corners[i].kp[0];
@@ -154,11 +144,11 @@ public:
                 observation.y = sum_y / 8.0;
                 observation.z = sum_z / 8.0;
 
-                sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-                sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-                sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+                sigma_pos[0] = msg->dimensions_3d[0];
+                sigma_pos[1] = msg->dimensions_3d[1];
+                sigma_pos[2] = msg->dimensions_3d[2];
                 sigma_pos[3] = 0.1;
-            }
+
         } else {
             std::cout << "no person detected" << std::endl;
             observation.name = "";
@@ -166,12 +156,11 @@ public:
         }
     }
 
-    void PosePixCallback_doorway(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+    void PosePixCallback_doorway(const zed_interfaces::msg::Object::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (!msg->objects.empty()) {
-            if (msg->objects[0].skeleton_available) {
+        if (msg) {
                 observation.name = "doorway";
-                zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
+                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
                 float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
                 for (int i = 0; i < 8; i++) {
                     sum_x += bounding_box.corners[i].kp[0];
@@ -184,11 +173,11 @@ public:
                 observation.y = sum_y / 8.0;
                 observation.z = sum_z / 8.0;
 
-                sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-                sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-                sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+                sigma_pos[0] = msg->dimensions_3d[0];
+                sigma_pos[1] = msg->dimensions_3d[1];
+                sigma_pos[2] = msg->dimensions_3d[2];
                 sigma_pos[3] = 0.1;
-            }
+
         } else {
             std::cout << "no person detected" << std::endl;
             observation.name = "";
@@ -196,12 +185,11 @@ public:
         }
     }
 
-    void PosePixCallback_livingroom(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+    void PosePixCallback_dining_room(const zed_interfaces::msg::Object::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (!msg->objects.empty()) {
-            if (msg->objects[0].skeleton_available) {
-                observation.name = "livingroom";
-                zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
+        if (msg) {
+                observation.name = "dining_room";
+                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
                 float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
                 for (int i = 0; i < 8; i++) {
                     sum_x += bounding_box.corners[i].kp[0];
@@ -214,11 +202,11 @@ public:
                 observation.y = sum_y / 8.0;
                 observation.z = sum_z / 8.0;
 
-                sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-                sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-                sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+                sigma_pos[0] = msg->dimensions_3d[0];
+                sigma_pos[1] = msg->dimensions_3d[1];
+                sigma_pos[2] = msg->dimensions_3d[2];
                 sigma_pos[3] = 0.1;
-            }
+
         } else {
             std::cout << "no person detected" << std::endl;
             observation.name = "";
@@ -289,7 +277,7 @@ public:
     void cam_extrinsics_from_tf() {
 
 //        std::vector<std::string> cams{"dining", "kitchen", "bedroom", "livingroom", "hallway", "doorway"};
-        std::vector<std::string> cams{"kitchen", "livingroom", "doorway"};
+        std::vector<std::string> cams{"kitchen", "dining_room", "doorway"};
 //        std::vector<std::pair<std::string, int>> cams{"zed_kitchen_left_camera_frame"};
 
         // Loop over the keys of map_cam_aptag using a range-based for loop
@@ -424,7 +412,6 @@ int main(int argc, char **argv) {
             // Define the bounds based on the house
             std::pair<double, double> x_bound = std::make_pair(-5, 5.0);
             std::pair<double, double> y_bound = std::make_pair(-7.0, 7.0);
-//            std::pair<double, double> z_bound = std::make_pair(-1.0, 1.0);
             std::pair<double, double> z_bound = std::make_pair(0, 0);
             std::pair<double, double> theta_bound = std::make_pair(-3.1416, 3.1416);
 
@@ -461,7 +448,7 @@ int main(int argc, char **argv) {
 //                    auto end = std::chrono::high_resolution_clock::now();
 //                    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - beg);
 //                    double delta_t = duration.count() / 1000000.0;
-                    double delta_t = 0.1; // for debug
+                    double delta_t = 0.1;
 
                     particle_filter.motion_model(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_);
                     node->publish_particles(particle_filter.particles);

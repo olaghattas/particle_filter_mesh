@@ -254,8 +254,9 @@ bool ParticleFilter::check_particle_at(const std::string &loc, Eigen::Vector3d p
 void ParticleFilter::enforce_non_collision(const std::vector <Particle> &old_particles,
                                            std::vector<bool> doors_status) {
 
+    // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
     std::vector <std::string>
-    lndmarks = {"obstacles" , "bedroom_door", "bathroom_door", "living_room_door", "outside_door"};
+    lndmarks = {"obstacles" , "bedroom_door", "bathroom_door", "outside_door"};
     for (int i = 0; i < num_particles; ++i) {
         Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
         if (check_particle_at(lndmarks[0], point)) {
@@ -277,16 +278,9 @@ void ParticleFilter::enforce_non_collision(const std::vector <Particle> &old_par
                 particles[i] = old_particles[i];
                 particles[i].weight = 0.0;
             }
-        } else if (check_particle_at(lndmarks[3], point)) {
-            // living_room_door
-            if (doors_status[2]) {
-                // door 1 closed keep old particles
-                particles[i] = old_particles[i];
-                particles[i].weight = 0.0;
-            }
         } else if (check_particle_at(lndmarks[4], point)) {
             // outside_door
-            if (doors_status[3]) {
+            if (doors_status[2]) {
                 // door 1 closed keep old particles
                 particles[i] = old_particles[i];
                 particles[i].weight = 0.0;
