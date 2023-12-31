@@ -54,6 +54,10 @@ private:
     rclcpp::Subscription<zed_interfaces::msg::Object>::SharedPtr pose_sub_lr;
     rclcpp::Subscription<zed_interfaces::msg::Object>::SharedPtr pose_sub_dw;
     Observation observation; // Member variable to store the observation
+    // to prevent overriding
+    Observation observation_kitchen; // Member variable to store the observation from kitchen
+    Observation observation_dining; // Member variable to store the observation from dining
+    Observation observation_doorway; // Member variable to store the observation from doorway
 
     rclcpp::TimerBase::SharedPtr timer_{nullptr};
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
@@ -124,13 +128,21 @@ public:
     }
 
     Observation getObservation() {
-        return observation;
+        if (observation_kitchen.name != ""){
+            return observation = observation_kitchen;
+        }
+        if (observation_dining.name != ""){
+            return observation = observation_dining;
+        }
+        else{
+            return observation = observation_doorway;
+        }
     }
 
     void PosePixCallback_kitchen(const zed_interfaces::msg::Object::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (msg) {
-                observation.name = "kitchen";
+        if (!(msg->label == "")) {
+                observation_kitchen.name = "kitchen";
                 zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
                 float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
                 for (int i = 0; i < 8; i++) {
@@ -140,9 +152,9 @@ public:
                 }
 
                 // Calculate the centroid
-                observation.x = sum_x / 8.0;
-                observation.y = sum_y / 8.0;
-                observation.z = sum_z / 8.0;
+                observation_kitchen.x = sum_x / 8.0;
+                observation_kitchen.y = sum_y / 8.0;
+                observation_kitchen.z = sum_z / 8.0;
 
                 sigma_pos[0] = msg->dimensions_3d[0];
                 sigma_pos[1] = msg->dimensions_3d[1];
@@ -151,15 +163,15 @@ public:
 
         } else {
             std::cout << "no person detected" << std::endl;
-            observation.name = "";
+            observation_kitchen.name = "";
 
         }
     }
 
     void PosePixCallback_doorway(const zed_interfaces::msg::Object::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (msg) {
-                observation.name = "doorway";
+        if (!(msg->label == "")) {
+                observation_doorway.name = "doorway";
                 zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
                 float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
                 for (int i = 0; i < 8; i++) {
@@ -169,9 +181,9 @@ public:
                 }
 
                 // Calculate the centroid
-                observation.x = sum_x / 8.0;
-                observation.y = sum_y / 8.0;
-                observation.z = sum_z / 8.0;
+                observation_doorway.x = sum_x / 8.0;
+                observation_doorway.y = sum_y / 8.0;
+                observation_doorway.z = sum_z / 8.0;
 
                 sigma_pos[0] = msg->dimensions_3d[0];
                 sigma_pos[1] = msg->dimensions_3d[1];
@@ -180,15 +192,15 @@ public:
 
         } else {
             std::cout << "no person detected" << std::endl;
-            observation.name = "";
+            observation_doorway.name = "";
 
         }
     }
 
     void PosePixCallback_dining_room(const zed_interfaces::msg::Object::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (msg) {
-                observation.name = "dining_room";
+        if (!(msg->label == "")) {
+                observation_dining.name = "dining_room";
                 zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
                 float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
                 for (int i = 0; i < 8; i++) {
@@ -198,9 +210,9 @@ public:
                 }
 
                 // Calculate the centroid
-                observation.x = sum_x / 8.0;
-                observation.y = sum_y / 8.0;
-                observation.z = sum_z / 8.0;
+                observation_dining.x = sum_x / 8.0;
+                observation_dining.y = sum_y / 8.0;
+                observation_dining.z = sum_z / 8.0;
 
                 sigma_pos[0] = msg->dimensions_3d[0];
                 sigma_pos[1] = msg->dimensions_3d[1];
@@ -209,7 +221,7 @@ public:
 
         } else {
             std::cout << "no person detected" << std::endl;
-            observation.name = "";
+            observation_dining.name = "";
 
         }
     }

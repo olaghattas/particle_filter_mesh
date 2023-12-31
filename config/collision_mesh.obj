@@ -1,7 +1,7 @@
 # Blender v3.6.1 OBJ File: ''
 # www.blender.org
 mtllib sajay_obstacles.mtl
-o obstacles_Plane
+o obstacles
 v -3.661439 -4.932559 1.500000
 v -3.675564 -3.138611 1.500000
 v -4.491841 -4.847806 1.500000
