@@ -141,7 +141,7 @@ public:
 
     void PosePixCallback_kitchen(const zed_interfaces::msg::Object::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (!(msg->label == "")) {
+        if (msg != nullptr && !(msg->label == "") ) {
                 observation_kitchen.name = "kitchen";
                 zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
                 float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
@@ -295,19 +295,22 @@ public:
         // Loop over the keys of map_cam_aptag using a range-based for loop
         for (const auto &cam: cams) {
             // Get transformation matrix from camera to aptag /// from aptag detection
+            std::cout << " cAM_cam " << cam << std::endl;
+            std::cout << "  " << map_cam_aptag[cam] << "  " << "zed_" + cam + "_left_camera_frame" << std::endl;
+//
             Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf(map_cam_aptag[cam],
                                                                                        "zed_" + cam +
                                                                                        "_left_camera_frame");
             std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
-
+//
             // Get transformation matrix from map to waptag
             Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", map_cam_aptag[cam]);
             std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
-
-            // Get transformation matrix from map to aptag
+//
+//            // Get transformation matrix from map to aptag
             Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = t_waptag_to_cam * t_cam_to_aptag;
 //            std::cout << " t_cam_to_map " << t_cam_to_map << std::endl;
-
+//
             cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
         }
     }
@@ -317,7 +320,7 @@ public:
             // get the geometry transform frames
             geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform(
                     toFrame, fromFrame,
-                    tf2::TimePoint(), std::chrono::milliseconds(10000000));
+                    tf2::TimePoint(), std::chrono::milliseconds(100000));
 
             geometry_msgs::msg::Transform transform_ = t.transform;
 
