@@ -63,6 +63,7 @@ private:
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     std::map<std::string, std::string> map_cam_aptag;
+    std::map<std::string, std::string> map_cam_aptag_un;
 
 //    std::vector<bool> door_status_;
     bool door_outdoor;
@@ -76,6 +77,10 @@ public:
         map_cam_aptag["doorway"] = "tag_" + std::string(std::getenv("tag_doorway")) + "_zed";
         map_cam_aptag["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen")) + "_zed";
         map_cam_aptag["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room")) + "_zed";
+
+        map_cam_aptag_un["doorway"] = "tag_" + std::string(std::getenv("tag_doorway"));
+        map_cam_aptag_un["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen"));
+        map_cam_aptag_un["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room"));
 
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("marker", 10);
 
@@ -304,12 +309,12 @@ public:
             std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
 //
             // Get transformation matrix from map to waptag
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", map_cam_aptag[cam]);
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", map_cam_aptag_un[cam]);
             std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
 //
 //            // Get transformation matrix from map to aptag
             Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = t_waptag_to_cam * t_cam_to_aptag;
-//            std::cout << " t_cam_to_map " << t_cam_to_map << std::endl;
+            std::cout << " t_cam_to_map " << t_cam_to_map << std::endl;
 //
             cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
         }
