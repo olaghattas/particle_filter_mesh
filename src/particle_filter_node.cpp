@@ -31,7 +31,7 @@
 #include <random>
 #include <map>
 #include <opencv2/opencv.hpp>
-#include "detection_msgs/msg/door_status.hpp"
+#include "particle_filter_msgs/msg/door_status.hpp"
 #include <array>
 #include <yaml-cpp/yaml.h>
 #include "ament_index_cpp/get_package_share_directory.hpp"
@@ -102,28 +102,28 @@ public:
                 [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_doorway(msg); });
 
 
-        auto door_outdoor_sub = create_subscription<detection_msgs::msg::DoorStatus>(
+        auto door_outdoor_sub = create_subscription<particle_filter_msgs::msg::DoorStatus>(
                 "/smartthings_sensors_door_outdoor", 10,
-                [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorOutdoorCallback(msg); });
-        auto door_bedroom_sub = create_subscription<detection_msgs::msg::DoorStatus>(
+                [this](const particle_filter_msgs::msg::DoorStatus::SharedPtr msg) { DoorOutdoorCallback(msg); });
+        auto door_bedroom_sub = create_subscription<particle_filter_msgs::msg::DoorStatus>(
                 "/smartthings_sensors_door_bedroom", 10,
-                [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorBedroomCallback(msg); });
-        auto door_bathroom_sub = create_subscription<detection_msgs::msg::DoorStatus>(
+                [this](const particle_filter_msgs::msg::DoorStatus::SharedPtr msg) { DoorBedroomCallback(msg); });
+        auto door_bathroom_sub = create_subscription<particle_filter_msgs::msg::DoorStatus>(
                 "/smartthings_sensors_door_bathroom", 10,
-                [this](const detection_msgs::msg::DoorStatus::SharedPtr msg) { DoorBathroomCallback(msg); });
+                [this](const particle_filter_msgs::msg::DoorStatus::SharedPtr msg) { DoorBathroomCallback(msg); });
     }
 
     std::array<double, 4> sigma_pos;
 
-    void DoorOutdoorCallback(const detection_msgs::msg::DoorStatus::SharedPtr &msg) {
+    void DoorOutdoorCallback(const particle_filter_msgs::msg::DoorStatus::SharedPtr &msg) {
         door_outdoor = msg->open;
     }
 
-    void DoorBedroomCallback(const detection_msgs::msg::DoorStatus::SharedPtr &msg) {
+    void DoorBedroomCallback(const particle_filter_msgs::msg::DoorStatus::SharedPtr &msg) {
         door_bedroom = msg->open;
     }
 
-    void DoorBathroomCallback(const detection_msgs::msg::DoorStatus::SharedPtr &msg) {
+    void DoorBathroomCallback(const particle_filter_msgs::msg::DoorStatus::SharedPtr &msg) {
         door_bathroom = msg->open;
     }
 

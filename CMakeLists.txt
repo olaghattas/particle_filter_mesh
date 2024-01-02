@@ -22,7 +22,6 @@ find_package(particle_filter_msgs REQUIRED)
 find_package(zed_interfaces REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(cv_bridge REQUIRED)
-find_package(detection_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(OpenCV REQUIRED)
@@ -36,7 +35,6 @@ set(dependencies1
         ament_index_cpp
         geometry_msgs
         cv_bridge
-        detection_msgs
         tf2_ros
         particle_filter_msgs
         shr_utils
