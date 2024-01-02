@@ -16,7 +16,9 @@ find_package(visualization_msgs REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(particle_filter_msgs REQUIRED)
 find_package(zed_interfaces REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(cv_bridge REQUIRED)
@@ -36,9 +38,10 @@ set(dependencies1
         cv_bridge
         detection_msgs
         tf2_ros
-        zed_interfaces
+        particle_filter_msgs
         shr_utils
-
+        zed_interfaces
+        std_msgs
         )
 
 # Add executable

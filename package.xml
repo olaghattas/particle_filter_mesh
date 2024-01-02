@@ -12,12 +12,14 @@
   <buildtool_depend>detection_msgs</buildtool_depend>
 
   <depend>visualization_msgs</depend>
+  <depend>particle_filter_msgs</depend>
   <depend>zed_interfaces</depend>
   <depend>rclcpp_components</depend>
   <depend>rclcpp</depend>
   <depend>cv_bridge</depend>
   <depend>detection_msgs</depend>
   <depend>shr_utils</depend>
+  <depend>std_msgs</depend>
 
   <build_depend>opencv2</build_depend>
   <build_depend>sensor_msgs</build_depend>
