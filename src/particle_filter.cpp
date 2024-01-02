@@ -278,7 +278,7 @@ void ParticleFilter::enforce_non_collision(const std::vector <Particle> &old_par
                 particles[i] = old_particles[i];
                 particles[i].weight = 0.0;
             }
-        } else if (check_particle_at(lndmarks[4], point)) {
+        } else if (check_particle_at(lndmarks[3], point)) {
             // outside_door
             if (doors_status[2]) {
                 // door 1 closed keep old particles

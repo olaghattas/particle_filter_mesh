@@ -10,15 +10,14 @@
 #include "visualization_msgs/msg/marker.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include <std_msgs/msg/float64_multi_array.hpp>
 
-#include <sensor_msgs/msg/camera_info.hpp>
-#include <sensor_msgs/msg/image.hpp>
-#include <geometry_msgs/msg/point.hpp>
-#include <geometry_msgs/msg/vector3.hpp>
-#include <geometry_msgs/msg/quaternion.hpp>
+//#include <sensor_msgs/msg/camera_info.hpp>
+//#include <sensor_msgs/msg/image.hpp>
+//#include <geometry_msgs/msg/point.hpp>
+//#include <geometry_msgs/msg/vector3.hpp>
+//#include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
-#include <geometry_msgs/msg/pose.hpp>
+//#include <geometry_msgs/msg/pose.hpp>
 
 #include <Eigen/Dense>
 #include <cv_bridge/cv_bridge.h>
@@ -38,6 +37,8 @@
 #include "ament_index_cpp/get_package_share_directory.hpp"
 
 #include "zed_interfaces/msg/objects_stamped.hpp"
+#include <std_msgs/msg/float32_multi_array.hpp>
+#include "particle_filter_msgs/msg/pose_msg.hpp"
 #include "zed_interfaces/msg/bounding_box3_d.hpp"
 #include "zed_interfaces/msg/object.hpp"
 #include <cstdlib>
@@ -50,9 +51,9 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_3d_pt;
 
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
-    rclcpp::Subscription<zed_interfaces::msg::Object>::SharedPtr pose_sub_k;
-    rclcpp::Subscription<zed_interfaces::msg::Object>::SharedPtr pose_sub_lr;
-    rclcpp::Subscription<zed_interfaces::msg::Object>::SharedPtr pose_sub_dw;
+    rclcpp::Subscription<particle_filter_msgs::msg::PoseMsg>::SharedPtr pose_sub_k;
+    rclcpp::Subscription<particle_filter_msgs::msg::PoseMsg>::SharedPtr pose_sub_lr;
+    rclcpp::Subscription<particle_filter_msgs::msg::PoseMsg>::SharedPtr pose_sub_dw;
     Observation observation; // Member variable to store the observation
     // to prevent overriding
     Observation observation_kitchen; // Member variable to store the observation from kitchen
@@ -78,9 +79,9 @@ public:
         map_cam_aptag["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen")) + "_zed";
         map_cam_aptag["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room")) + "_zed";
 
-        map_cam_aptag_un["doorway"] = "tag_" + std::string(std::getenv("tag_doorway"));
-        map_cam_aptag_un["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen"));
-        map_cam_aptag_un["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room"));
+        map_cam_aptag_un["doorway"] = "aptag_" + std::string(std::getenv("tag_doorway"));
+        map_cam_aptag_un["kitchen"] = "aptag_" + std::string(std::getenv("tag_kitchen"));
+        map_cam_aptag_un["dining_room"] = "aptag_" + std::string(std::getenv("tag_dining_room"));
 
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("marker", 10);
 
@@ -88,17 +89,17 @@ public:
 
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-        pose_sub_k = create_subscription<zed_interfaces::msg::Object>(
+        pose_sub_k = create_subscription<particle_filter_msgs::msg::PoseMsg>(
                 "/kitchen_person_pose", 1,
-                [this](const zed_interfaces::msg::Object::SharedPtr msg) { PosePixCallback_kitchen(msg); });
+                [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
-        pose_sub_lr = create_subscription<zed_interfaces::msg::Object>(
+        pose_sub_lr = create_subscription<particle_filter_msgs::msg::PoseMsg>(
                 "/dining_room_person_pose", 1,
-                [this](const zed_interfaces::msg::Object::SharedPtr msg) { PosePixCallback_dining_room(msg); });
+                [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_dining_room(msg); });
 
-        pose_sub_dw = create_subscription<zed_interfaces::msg::Object>(
+        pose_sub_dw = create_subscription<particle_filter_msgs::msg::PoseMsg>(
                 "/doorway_person_pose", 1,
-                [this](const zed_interfaces::msg::Object::SharedPtr msg) { PosePixCallback_doorway(msg); });
+                [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_doorway(msg); });
 
 
         auto door_outdoor_sub = create_subscription<detection_msgs::msg::DoorStatus>(
@@ -144,11 +145,11 @@ public:
         }
     }
 
-    void PosePixCallback_kitchen(const zed_interfaces::msg::Object::SharedPtr &msg) {
+    void PosePixCallback_kitchen(const particle_filter_msgs::msg::PoseMsg::SharedPtr &msg) {
         //# 2 -> POSE_38
         if (msg != nullptr && !(msg->label == "") ) {
                 observation_kitchen.name = "kitchen";
-                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
+                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box;
                 float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
                 for (int i = 0; i < 8; i++) {
                     sum_x += bounding_box.corners[i].kp[0];
@@ -161,9 +162,9 @@ public:
                 observation_kitchen.y = sum_y / 8.0;
                 observation_kitchen.z = sum_z / 8.0;
 
-                sigma_pos[0] = msg->dimensions_3d[0];
-                sigma_pos[1] = msg->dimensions_3d[1];
-                sigma_pos[2] = msg->dimensions_3d[2];
+                sigma_pos[0] = msg->dimensions_3d.data[0];
+                sigma_pos[1] = msg->dimensions_3d.data[1];
+                sigma_pos[2] = msg->dimensions_3d.data[2];
                 sigma_pos[3] = 0.1;
 
         } else {
@@ -173,11 +174,11 @@ public:
         }
     }
 
-    void PosePixCallback_doorway(const zed_interfaces::msg::Object::SharedPtr &msg) {
+    void PosePixCallback_doorway(const particle_filter_msgs::msg::PoseMsg::SharedPtr &msg) {
         //# 2 -> POSE_38
         if (!(msg->label == "")) {
                 observation_doorway.name = "doorway";
-                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
+                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box;
                 float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
                 for (int i = 0; i < 8; i++) {
                     sum_x += bounding_box.corners[i].kp[0];
@@ -190,9 +191,9 @@ public:
                 observation_doorway.y = sum_y / 8.0;
                 observation_doorway.z = sum_z / 8.0;
 
-                sigma_pos[0] = msg->dimensions_3d[0];
-                sigma_pos[1] = msg->dimensions_3d[1];
-                sigma_pos[2] = msg->dimensions_3d[2];
+                sigma_pos[0] = msg->dimensions_3d.data[0];
+                sigma_pos[1] = msg->dimensions_3d.data[1];
+                sigma_pos[2] = msg->dimensions_3d.data[2];
                 sigma_pos[3] = 0.1;
 
         } else {
@@ -202,11 +203,11 @@ public:
         }
     }
 
-    void PosePixCallback_dining_room(const zed_interfaces::msg::Object::SharedPtr &msg) {
+    void PosePixCallback_dining_room(const particle_filter_msgs::msg::PoseMsg::SharedPtr &msg) {
         //# 2 -> POSE_38
         if (!(msg->label == "")) {
                 observation_dining.name = "dining_room";
-                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box_3d;
+                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box;
                 float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
                 for (int i = 0; i < 8; i++) {
                     sum_x += bounding_box.corners[i].kp[0];
@@ -219,9 +220,9 @@ public:
                 observation_dining.y = sum_y / 8.0;
                 observation_dining.z = sum_z / 8.0;
 
-                sigma_pos[0] = msg->dimensions_3d[0];
-                sigma_pos[1] = msg->dimensions_3d[1];
-                sigma_pos[2] = msg->dimensions_3d[2];
+                sigma_pos[0] = msg->dimensions_3d.data[0];
+                sigma_pos[1] = msg->dimensions_3d.data[1];
+                sigma_pos[2] = msg->dimensions_3d.data[2];
                 sigma_pos[3] = 0.1;
 
         } else {
