@@ -90,7 +90,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 
 
     auto particles_before = particles;
-    std::cout << " x _before" << particles[0].x << " y_before" << particles[0].y << std::endl;
+    // std::cout << " x _before" << particles[0].x << " y_before" << particles[0].y << std::endl;
 //    write_to_file("before_motion_model.txt");
     for (auto &p: particles) {
 //        double yaw = p.theta;
@@ -124,10 +124,10 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
         p.theta += delta_yaw;
     }
 
-    std::cout << " x _after" << particles[0].x << " y_after" << particles[0].y << std::endl;
+    // std::cout << " x _after" << particles[0].x << " y_after" << particles[0].y << std::endl;
 
     // to be passed in through arguments
-    bool door_open = false;
+ 
     ParticleFilter::enforce_non_collision(particles_before, doors_status);
 //    write_to_file("after_motion_model.txt");
 
@@ -175,8 +175,6 @@ void ParticleFilter::resample() {
 //        int count = 0;
 //            resampled_particles[i]
 //        }
-    int dummy = 1;
-
 }
 
 void ParticleFilter::updateWeights(double std_landmark[],
@@ -203,8 +201,8 @@ void ParticleFilter::updateWeights(double std_landmark[],
             extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
             extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
             extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-    std::cout << " Observation ::: x " << TransformedPoint[0] << " y " << TransformedPoint[1] << " z "
-              << TransformedPoint[2] << std::endl;
+    // std::cout << " Observation ::: x " << TransformedPoint[0] << " y " << TransformedPoint[1] << " z "
+    //           << TransformedPoint[2] << std::endl;
 
 
     // loop through each of the particle to update
@@ -256,7 +254,9 @@ void ParticleFilter::enforce_non_collision(const std::vector <Particle> &old_par
 
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
     std::vector <std::string>
-    lndmarks = {"obstacles" , "bedroom_door", "bathroom_door", "outside_door"};
+    lndmarks = {"obstacles" , "bedroom_door", "bathroom_door", "outside_door", "obstacles_1"};
+    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " " << doors_status[2] << std::endl;
+    
     for (int i = 0; i < num_particles; ++i) {
         Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
         if (check_particle_at(lndmarks[0], point)) {
@@ -285,7 +285,12 @@ void ParticleFilter::enforce_non_collision(const std::vector <Particle> &old_par
                 particles[i] = old_particles[i];
                 particles[i].weight = 0.0;
             }
-        }
+        } else if (check_particle_at(lndmarks[4], point)) {
+            // obstacle  1 (not door)
+            particles[i] = old_particles[i];
+            particles[i].weight = 0.0;
+
+        } 
     }
 }
 

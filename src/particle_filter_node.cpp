@@ -52,7 +52,7 @@ private:
 
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
     rclcpp::Subscription<particle_filter_msgs::msg::PoseMsg>::SharedPtr pose_sub_k;
-    rclcpp::Subscription<particle_filter_msgs::msg::PoseMsg>::SharedPtr pose_sub_lr;
+    rclcpp::Subscription<particle_filter_msgs::msg::PoseMsg>::SharedPtr pose_sub_dn;
     rclcpp::Subscription<particle_filter_msgs::msg::PoseMsg>::SharedPtr pose_sub_dw;
     Observation observation; // Member variable to store the observation
     // to prevent overriding
@@ -93,7 +93,7 @@ public:
                 "/kitchen_person_pose", 1,
                 [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
-        pose_sub_lr = create_subscription<particle_filter_msgs::msg::PoseMsg>(
+        pose_sub_dn = create_subscription<particle_filter_msgs::msg::PoseMsg>(
                 "/dining_room_person_pose", 1,
                 [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_dining_room(msg); });
 
@@ -116,15 +116,24 @@ public:
     std::array<double, 4> sigma_pos;
 
     void DoorOutdoorCallback(const particle_filter_msgs::msg::DoorStatus::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
         door_outdoor = msg->open;
+        std::cout << "msg->open;" << msg->open << std::endl;
+        std::cout << "doorstats->open;" << door_outdoor << std::endl;
     }
 
     void DoorBedroomCallback(const particle_filter_msgs::msg::DoorStatus::SharedPtr &msg) {
+        std::cout << "********************************" << std::endl;
         door_bedroom = msg->open;
+        std::cout << "bedroom msg->open;" << msg->open << std::endl;
+        std::cout << "bedoroom doorstats->open;" << door_bedroom << std::endl;
     }
 
     void DoorBathroomCallback(const particle_filter_msgs::msg::DoorStatus::SharedPtr &msg) {
+        std::cout << "9999999999999999999999999999999999999" << std::endl;
         door_bathroom = msg->open;
+        std::cout << "bsth msg->open;" << msg->open << std::endl;
+        std::cout << "bedbathoroom doorstats->open;" << door_bathroom << std::endl;
     }
 
     std::vector<bool> getdoorstatus() {
@@ -431,8 +440,12 @@ int main(int argc, char **argv) {
             double n_x, n_y;
 
             // Define the bounds based on the house
-            std::pair<double, double> x_bound = std::make_pair(-5, 5.0);
-            std::pair<double, double> y_bound = std::make_pair(-7.0, 7.0);
+            //std::pair<double, double> x_bound = std::make_pair(-1.0, 1.0);
+            //std::pair<double, double> y_bound = std::make_pair(-1.0, 1.0);
+            
+            std::pair<double, double> x_bound = std::make_pair(-3.0, 2.0);
+            std::pair<double, double> y_bound = std::make_pair(-5.0, 1.0);
+            
             std::pair<double, double> z_bound = std::make_pair(0, 0);
             std::pair<double, double> theta_bound = std::make_pair(-3.1416, 3.1416);
 
