@@ -77,11 +77,11 @@ public:
 
         map_cam_aptag["doorway"] = "tag_" + std::string(std::getenv("tag_doorway")) + "_zed";
         map_cam_aptag["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen")) + "_zed";
-        map_cam_aptag["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room")) + "_zed";
+        //map_cam_aptag["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room")) + "_zed";
 
         map_cam_aptag_un["doorway"] = "aptag_" + std::string(std::getenv("tag_doorway"));
         map_cam_aptag_un["kitchen"] = "aptag_" + std::string(std::getenv("tag_kitchen"));
-        map_cam_aptag_un["dining_room"] = "aptag_" + std::string(std::getenv("tag_dining_room"));
+        //map_cam_aptag_un["dining_room"] = "aptag_" + std::string(std::getenv("tag_dining_room"));
 
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("marker", 10);
 
@@ -93,9 +93,9 @@ public:
                 "/kitchen_person_pose", 1,
                 [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
-        pose_sub_dn = create_subscription<particle_filter_msgs::msg::PoseMsg>(
-                "/dining_room_person_pose", 1,
-                [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_dining_room(msg); });
+//        pose_sub_dn = create_subscription<particle_filter_msgs::msg::PoseMsg>(
+//                "/dining_room_person_pose", 1,
+//                [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_dining_room(msg); });
 
         pose_sub_dw = create_subscription<particle_filter_msgs::msg::PoseMsg>(
                 "/doorway_person_pose", 1,
@@ -144,13 +144,19 @@ public:
 
     Observation getObservation() {
         if (observation_kitchen.name != ""){
+            std::cout << "observation in kitchen" << observation_kitchen.name  << std::endl;
             return observation = observation_kitchen;
         }
-        if (observation_dining.name != ""){
-            return observation = observation_dining;
+//        if (observation_dining.name != ""){
+//            return observation = observation_dining;
+//        }
+        else if(observation_doorway.name != ""){
+            std::cout << "observation in doorway " << observation_doorway.name << std::endl;
+            return observation = observation_doorway;
         }
         else{
-            return observation = observation_doorway;
+            observation.name = "";
+            return observation;
         }
     }
 
@@ -212,34 +218,34 @@ public:
         }
     }
 
-    void PosePixCallback_dining_room(const particle_filter_msgs::msg::PoseMsg::SharedPtr &msg) {
-        //# 2 -> POSE_38
-        if (!(msg->label == "")) {
-                observation_dining.name = "dining_room";
-                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box;
-                float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-                for (int i = 0; i < 8; i++) {
-                    sum_x += bounding_box.corners[i].kp[0];
-                    sum_y += bounding_box.corners[i].kp[1];
-                    sum_z += bounding_box.corners[i].kp[2];
-                }
-
-                // Calculate the centroid
-                observation_dining.x = sum_x / 8.0;
-                observation_dining.y = sum_y / 8.0;
-                observation_dining.z = sum_z / 8.0;
-
-                sigma_pos[0] = msg->dimensions_3d.data[0];
-                sigma_pos[1] = msg->dimensions_3d.data[1];
-                sigma_pos[2] = msg->dimensions_3d.data[2];
-                sigma_pos[3] = 0.1;
-
-        } else {
-            std::cout << "no person detected" << std::endl;
-            observation_dining.name = "";
-
-        }
-    }
+//    void PosePixCallback_dining_room(const particle_filter_msgs::msg::PoseMsg::SharedPtr &msg) {
+//        //# 2 -> POSE_38
+//        if (!(msg->label == "")) {
+//                observation_dining.name = "dining_room";
+//                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box;
+//                float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
+//                for (int i = 0; i < 8; i++) {
+//                    sum_x += bounding_box.corners[i].kp[0];
+//                    sum_y += bounding_box.corners[i].kp[1];
+//                    sum_z += bounding_box.corners[i].kp[2];
+//                }
+//
+//                // Calculate the centroid
+//                observation_dining.x = sum_x / 8.0;
+//                observation_dining.y = sum_y / 8.0;
+//                observation_dining.z = sum_z / 8.0;
+//
+//                sigma_pos[0] = msg->dimensions_3d.data[0];
+//                sigma_pos[1] = msg->dimensions_3d.data[1];
+//                sigma_pos[2] = msg->dimensions_3d.data[2];
+//                sigma_pos[3] = 0.1;
+//
+//        } else {
+//            std::cout << "no person detected" << std::endl;
+//            observation_dining.name = "";
+//
+//        }
+//    }
 
 
     void publish_3d_point(float x, float y, float z, std::string frame_id, float r, float g, float b) {
@@ -304,7 +310,7 @@ public:
     void cam_extrinsics_from_tf() {
 
 //        std::vector<std::string> cams{"dining", "kitchen", "bedroom", "livingroom", "hallway", "doorway"};
-        std::vector<std::string> cams{"kitchen", "dining_room", "doorway"};
+        std::vector<std::string> cams{"kitchen", "doorway"};
 //        std::vector<std::pair<std::string, int>> cams{"zed_kitchen_left_camera_frame"};
 
         // Loop over the keys of map_cam_aptag using a range-based for loop
@@ -497,7 +503,10 @@ int main(int argc, char **argv) {
                     homogeneousPoint << obs_.x, obs_.y, obs_.z, 1.0;
 //                    node->publish_3d_point(homogeneousPoint[0], homogeneousPoint[1], homogeneousPoint[2], "zed_cam", 1,
 //                                           0, 0);
-                    auto extrinsicParams = camera_extrinsics[obs_.name];
+
+                    std::string cam_name = obs_.name;
+                    std::cout << "  cam_name  " << cam_name << std::endl;
+                    auto extrinsicParams = camera_extrinsics[cam_name];
 
                     Eigen::Vector4d TransformedPoint;
                     TransformedPoint << extrinsicParams(0, 0) * homogeneousPoint[0] +
@@ -516,7 +525,6 @@ int main(int argc, char **argv) {
 //                                           1);
 
                     // observation will always be from the same camera
-                    std::string cam_name = obs_.name;
                     observations.push_back(obs_);
 
                     // simulate the addition of noise to noiseless observation data.
