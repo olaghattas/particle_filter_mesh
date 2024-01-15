@@ -177,13 +177,16 @@ public:
                 observation_kitchen.y = sum_y / 8.0;
                 observation_kitchen.z = sum_z / 8.0;
 
-                sigma_pos[0] = msg->dimensions_3d.data[0];
+            std::cout << "Kitchen x: " << observation_kitchen.x << " y " << observation_kitchen.y  <<   " z " << observation_kitchen.z << std::endl;
+
+
+            sigma_pos[0] = msg->dimensions_3d.data[0];
                 sigma_pos[1] = msg->dimensions_3d.data[1];
                 sigma_pos[2] = msg->dimensions_3d.data[2];
                 sigma_pos[3] = 0.1;
 
         } else {
-            std::cout << "no person detected" << std::endl;
+            std::cout << "no person detected in kitchen" << std::endl;
             observation_kitchen.name = "";
 
         }
@@ -206,13 +209,15 @@ public:
                 observation_doorway.y = sum_y / 8.0;
                 observation_doorway.z = sum_z / 8.0;
 
+                std::cout << "Doorway x: " << observation_doorway.x << " y " << observation_doorway.y  <<   " z " << observation_doorway.z << std::endl;
+
                 sigma_pos[0] = msg->dimensions_3d.data[0];
                 sigma_pos[1] = msg->dimensions_3d.data[1];
                 sigma_pos[2] = msg->dimensions_3d.data[2];
                 sigma_pos[3] = 0.1;
 
         } else {
-            std::cout << "no person detected" << std::endl;
+            std::cout << "no person detected in dorway" << std::endl;
             observation_doorway.name = "";
 
         }
@@ -406,6 +411,36 @@ public:
         return t;
     }
 
+    geometry_msgs::msg::TransformStamped compute_mean_point(std::vector<Particle> particles){
+        //Compute the mean for all particles that have a reasonably good weight.
+    //    This is not part of the particle filter algorithm but rather an
+    //    addition to show the "best belief" for current position.
+        double m_x = 5.0;
+        double m_y = 10.0;
+        double m_count = 2.0;
+        int num_particles = particles.size();
+        Particle best_particle;
+            for (int i = 0; i < num_particles; ++i) {
+                m_count += particles[i].weight;
+                m_x += particles[i].x * particles[i].weight;
+                m_y += particles[i].y * particles[i].weight;
+            }
+
+        geometry_msgs::msg::TransformStamped t;
+        t.header.stamp = rclcpp::Clock().now();
+        t.header.frame_id = "unity";
+        /// should be whatever the code is expecting the name to be
+        t.child_frame_id = "nathan";
+        t.transform.translation.x = best_particle.x;
+        t.transform.translation.y = best_particle.y;
+        t.transform.translation.z = best_particle.z;
+        t.transform.rotation.x = 0;
+        t.transform.rotation.y = 0;
+        t.transform.rotation.z = sin(best_particle.theta / 2.0);
+        t.transform.rotation.w = cos(best_particle.theta / 2.0);
+//                std::cout << " x " << best_particle.x << " y " << best_particle.y << " z " << best_particle.z << std::endl;
+        return t;
+    }
 };
 
 int main(int argc, char **argv) {
@@ -506,23 +541,23 @@ int main(int argc, char **argv) {
 
                     std::string cam_name = obs_.name;
                     std::cout << "  cam_name  " << cam_name << std::endl;
-                    auto extrinsicParams = camera_extrinsics[cam_name];
+                     auto extrinsicParams = camera_extrinsics[cam_name];
 
-                    Eigen::Vector4d TransformedPoint;
-                    TransformedPoint << extrinsicParams(0, 0) * homogeneousPoint[0] +
-                                        extrinsicParams(0, 1) * homogeneousPoint[1] +
-                                        extrinsicParams(0, 2) * homogeneousPoint[2] +
-                                        extrinsicParams(0, 3) * homogeneousPoint[3],
-                            extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-                            extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-                            extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-                            extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-                            extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-                            extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-
-                    std::cout << "  camera_extrinsics[obs_.name]  " << extrinsicParams << std::endl;
-                    //node->publish_3d_point(TransformedPoint[0], TransformedPoint[1], TransformedPoint[2], "map", 0, 0,
-//                                           1);
+//                    Eigen::Vector4d TransformedPoint;
+//                    TransformedPoint << extrinsicParams(0, 0) * homogeneousPoint[0] +
+//                                        extrinsicParams(0, 1) * homogeneousPoint[1] +
+//                                        extrinsicParams(0, 2) * homogeneousPoint[2] +
+//                                        extrinsicParams(0, 3) * homogeneousPoint[3],
+//                            extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+//                            extrinsicParams(1, 2) * homogeneousPoint[2] + eobservations = {std::vector<Observation>} xtrinsicParams(1, 3) * homogeneousPoint[3],
+//                            extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+//                            extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+//                            extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+//                            extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+//
+//                    //std::cout << "  camera_extrinsics[obs_.name]  " << extrinsicParams << std::endl;
+//                    //node->publish_3d_point(TransformedPoint[0], TransformedPoint[1], TransformedPoint[2], "map", 0, 0,
+////                                           1);
 
                     // observation will always be from the same camera
                     observations.push_back(obs_);
@@ -547,13 +582,16 @@ int main(int argc, char **argv) {
                     particle_filter.resample();
                 }
 //                node->publish_particles(particle_filter.particles);
-//
+
+// uncommetn
+//              particle_filter.resample();
                 // Calculate and output the average weighted error of the particle filter over all time steps so far.
                 std::vector<Particle> particles = particle_filter.particles;
                 int num_particles = particles.size();
                 double highest_weight = 0.0;
 
                 Particle best_particle;
+
                 for (int i = 0; i < num_particles; ++i) {
                     if (particles[i].weight > highest_weight) {
                         highest_weight = particles[i].weight;
@@ -561,7 +599,8 @@ int main(int argc, char **argv) {
                     }
                 }
 
-                // Fill in the message
+
+//                // Fill in the message
                 geometry_msgs::msg::TransformStamped t;
                 t.header.stamp = rclcpp::Clock().now();
                 t.header.frame_id = "unity";
@@ -575,6 +614,7 @@ int main(int argc, char **argv) {
                 t.transform.rotation.z = sin(best_particle.theta / 2.0);
                 t.transform.rotation.w = cos(best_particle.theta / 2.0);
 //                std::cout << " x " << best_particle.x << " y " << best_particle.y << " z " << best_particle.z << std::endl;
+//                t = node -> compute_mean_point(particle_filter.particles);
                 tf_broadcaster_->sendTransform(t);
 
                 // because we want to listen to observations in this loop as well so we need to spin the node
