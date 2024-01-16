@@ -127,7 +127,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     // std::cout << " x _after" << particles[0].x << " y_after" << particles[0].y << std::endl;
 
     // to be passed in through arguments
- 
+
     ParticleFilter::enforce_non_collision(particles_before, doors_status);
 //    write_to_file("after_motion_model.txt");
 
@@ -149,7 +149,7 @@ void ParticleFilter::resample() {
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> dist(0.0, 1.0 / num_particles);
 
-    std::vector <Particle> resampled_particles = particles;
+    std::vector<Particle> resampled_particles = particles;
 
     double c = particles[0].weight;
     int i = 0;
@@ -178,7 +178,7 @@ void ParticleFilter::resample() {
 }
 
 void ParticleFilter::updateWeights(double std_landmark[],
-                                   std::vector <Observation> observations,
+                                   std::vector<Observation> observations,
                                    Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams) {
     // Update the weights of each particle using a multi-variate Gaussian distribution. You can read
 
@@ -193,14 +193,18 @@ void ParticleFilter::updateWeights(double std_landmark[],
     Eigen::Vector4d homogeneousPoint;
     homogeneousPoint << current_obs.x, current_obs.y, current_obs.z, 1.0;
     Eigen::Vector4d TransformedPoint;
-    TransformedPoint << extrinsicParams(0, 0) * homogeneousPoint[0] + extrinsicParams(0, 1) * homogeneousPoint[1] +
-                        extrinsicParams(0, 2) * homogeneousPoint[2] + extrinsicParams(0, 3) * homogeneousPoint[3],
-            extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-            extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-            extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-            extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-            extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-            extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+
+    std::cout << "update2 &&&&&&&&&&&&&&&&&&&&&& " << std::endl;
+    TransformedPoint <<
+    extrinsicParams(0, 0) * homogeneousPoint[0] + extrinsicParams(0, 1) * homogeneousPoint[1] +
+    extrinsicParams(0, 2) * homogeneousPoint[2] + extrinsicParams(0, 3) * homogeneousPoint[3],
+    extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+    extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+    extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+    extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+    extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+    extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+
     // std::cout << " Observation ::: x " << TransformedPoint[0] << " y " << TransformedPoint[1] << " z "
     //           << TransformedPoint[2] << std::endl;
 
@@ -249,14 +253,15 @@ bool ParticleFilter::check_particle_at(const std::string &loc, Eigen::Vector3d p
     return shr_utils::PointInMesh(point, verts, verts2d);
 }
 
-void ParticleFilter::enforce_non_collision(const std::vector <Particle> &old_particles,
+void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_particles,
                                            std::vector<bool> doors_status) {
 
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
-    std::vector <std::string>
-    lndmarks = {"obstacles" , "bedroom_door", "bathroom_door", "outside_door", "obstacles_1"};
-    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " " << doors_status[2] << std::endl;
-    
+    std::vector<std::string>
+            lndmarks = {"obstacles", "bedroom_door", "bathroom_door", "outside_door", "obstacles_1"};
+    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " "
+              << doors_status[2] << std::endl;
+
     for (int i = 0; i < num_particles; ++i) {
         Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
         if (check_particle_at(lndmarks[0], point)) {
@@ -290,7 +295,7 @@ void ParticleFilter::enforce_non_collision(const std::vector <Particle> &old_par
             particles[i] = old_particles[i];
             particles[i].weight = 0.0;
 
-        } 
+        }
     }
 }
 
