@@ -75,6 +75,20 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
 
 }
 
+void ParticleFilter::particles_in_range(std::pair<double, double> x_bound, std::pair<double, double> y_bound,
+                                        int ind_start) {
+    std::uniform_real_distribution<double> xNoise(x_bound.first, x_bound.second);
+    std::uniform_real_distribution<double> yNoise(y_bound.first, y_bound.second);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    for (int i = ind_start; i < ind_start + 10; ++i) {
+        particles[i].x = xNoise(gen);
+        particles[i].y = yNoise(gen);
+
+    }
+}
+
 void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
                                   std::vector<bool> doors_status) {
     std::default_random_engine gen;
@@ -83,8 +97,8 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 //    std::normal_distribution<double> zNoise(0, std_pos[2]);
 //    std::normal_distribution<double> yawNoise(0, std_pos[3]);
 
-    std::normal_distribution<double> xNoise(0, 0.03);
-    std::normal_distribution<double> yNoise(0, 0.03);
+    std::normal_distribution<double> xNoise(0, 0.01);
+    std::normal_distribution<double> yNoise(0, 0.01);
     std::normal_distribution<double> zNoise(0, 0.03);
     std::normal_distribution<double> yawNoise(0, 0.03);
 
@@ -93,42 +107,64 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     // std::cout << " x _before" << particles[0].x << " y_before" << particles[0].y << std::endl;
 //    write_to_file("before_motion_model.txt");
     for (auto &p: particles) {
-//        double yaw = p.theta;
-//
-//        double delta_x = 0;
-//        double delta_y = 0;
-//        double delta_z = 0;
-//        double delta_yaw = 0;
-//
-//        if (fabs(yaw_rate) < EPSILON) {
-//            delta_x = velocity * delta_t * cos(yaw);
-//            delta_y = velocity * delta_t * sin(yaw);
-//
-//        } else {
-//            double c = velocity / yaw_rate;
-//            delta_x = c * (sin(yaw + yaw_rate * delta_t) - sin(yaw));
-//            delta_y = c * (cos(yaw) - cos(yaw + yaw_rate * delta_t));
-//            delta_yaw = yaw_rate * delta_t;
-//
-//        }
-        //Add control noise
-        double delta_x = xNoise(gen); //* delta_t;
-        double delta_y = yNoise(gen);// * delta_t;
-        double delta_z = zNoise(gen);// * delta_t;
-        double delta_yaw = yawNoise(gen);// * delta_t;
+        // only 80 percent of the oarticle will be directed in the direction of the vector the rest will be random
+        // Calculate average displacement vector from available readings
+        if (previous_observation.size() > 2 ){ //&& p.id < num_particles * 0.8) {
+            Eigen::Vector2d avg_displacement(0.0, 0.0);
+            for (int i = 0; i < previous_observation.size(); i++) {
+                // Extract x and y coordinates from each reading
+                double dx = previous_observation[i].x() - p.x;
+                double dy = previous_observation[i].y() - p.y;
+                avg_displacement += Eigen::Vector2d(dx, dy);
+            }
+            avg_displacement /= previous_observation.size();
 
+            // Normalize average displacement for velocity calculation
 
-        p.x += delta_x;
-        p.y += delta_y;
-        p.z += 0;
-        p.theta += delta_yaw;
+//            double avg_distance = avg_displacement.norm();
+
+            // Update particle position and orientation using avg_direction and velocity
+            double delta_x = avg_displacement.x() + xNoise(gen);
+            double delta_y = avg_displacement.y() + yNoise(gen);
+            double delta_yaw = yawNoise(gen);
+            p.x += delta_x;
+            p.y += delta_y;
+            p.theta += delta_yaw;
+
+        } else {
+            // add noise randomly
+            //Add control noise
+            double delta_x = xNoise(gen); //* delta_t;
+            double delta_y = yNoise(gen); // * delta_t;
+//            double delta_z = zNoise(gen); // * delta_t;
+            double delta_yaw = yawNoise(gen); // * delta_t;
+
+            p.x += delta_x;
+            p.y += delta_y;
+            p.z += 0;
+            p.theta += delta_yaw;
+        }
     }
+
 
     // std::cout << " x _after" << particles[0].x << " y_after" << particles[0].y << std::endl;
 
     // to be passed in through arguments
 
+    // use last 20 particle in areas where cameras can view
+    // for now this will happen at all times later will dedpend on observation availability
+    if (no_readings) {
+        std::pair<double, double> x_kitchen_bound = std::make_pair(0, 2.0);
+        std::pair<double, double> y_kitchen_bound = std::make_pair(-2, 0.25);
+        std::pair<double, double> x_dining_bound = std::make_pair(0.6, 2.3);
+        std::pair<double, double> y_dining_bound = std::make_pair(1.5, 3.7);
+
+        ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
+        ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
+    }
+
     ParticleFilter::enforce_non_collision(particles_before, doors_status);
+
 //    write_to_file("after_motion_model.txt");
 
 }
@@ -192,22 +228,32 @@ void ParticleFilter::updateWeights(double std_landmark[],
     Observation current_obs = observations[0]; // TODO be changed when more observations are added
     Eigen::Vector4d homogeneousPoint;
     homogeneousPoint << current_obs.x, current_obs.y, current_obs.z, 1.0;
+
     Eigen::Vector4d TransformedPoint;
 
     std::cout << "update2 &&&&&&&&&&&&&&&&&&&&&& " << std::endl;
     TransformedPoint <<
-    extrinsicParams(0, 0) * homogeneousPoint[0] + extrinsicParams(0, 1) * homogeneousPoint[1] +
-    extrinsicParams(0, 2) * homogeneousPoint[2] + extrinsicParams(0, 3) * homogeneousPoint[3],
-    extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-    extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-    extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-    extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-    extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-    extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+                    extrinsicParams(0, 0) * homogeneousPoint[0] + extrinsicParams(0, 1) * homogeneousPoint[1] +
+                    extrinsicParams(0, 2) * homogeneousPoint[2] + extrinsicParams(0, 3) * homogeneousPoint[3],
+                    extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+                    extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+                    extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+                    extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+                    extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+                    extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
 
     // std::cout << " Observation ::: x " << TransformedPoint[0] << " y " << TransformedPoint[1] << " z "
     //           << TransformedPoint[2] << std::endl;
 
+    if (previous_observation.size() < 10)
+        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
+    else{
+        // Remove the oldest observation
+        previous_observation.erase(previous_observation.begin());
+
+        // Add the newest observation
+        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
+    }
 
     // loop through each of the particle to update
     for (int i = 0; i < num_particles; ++i) {
@@ -240,7 +286,9 @@ void ParticleFilter::updateWeights(double std_landmark[],
     for (int i = 0; i < num_particles; i++) {
         particles[i].weight /= weights_sum;
     }
-//    write_to_file("after_weight_update.txt");
+    //write_to_file("after_weight_update.txt");
+
+    // Update observations
 }
 
 
@@ -259,8 +307,8 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
     std::vector<std::string>
             lndmarks = {"obstacles", "bedroom_door", "bathroom_door", "outside_door", "obstacles_1"};
-    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " "
-              << doors_status[2] << std::endl;
+//    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " "
+//              << doors_status[2] << std::endl;
 
     for (int i = 0; i < num_particles; ++i) {
         Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};

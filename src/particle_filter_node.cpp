@@ -18,6 +18,8 @@
 //#include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 //#include <geometry_msgs/msg/pose.hpp>
+#include "std_msgs/msg/bool.hpp"
+
 
 #include <Eigen/Dense>
 #include <cv_bridge/cv_bridge.h>
@@ -41,6 +43,7 @@
 #include "particle_filter_msgs/msg/pose_msg.hpp"
 #include "zed_interfaces/msg/bounding_box3_d.hpp"
 #include "zed_interfaces/msg/object.hpp"
+
 #include <cstdlib>
 
 
@@ -51,9 +54,9 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_3d_pt;
 
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
-    rclcpp::Subscription<particle_filter_msgs::msg::PoseMsg>::SharedPtr pose_sub_k;
-    rclcpp::Subscription<particle_filter_msgs::msg::PoseMsg>::SharedPtr pose_sub_dn;
-    rclcpp::Subscription<particle_filter_msgs::msg::PoseMsg>::SharedPtr pose_sub_dw;
+    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_k;
+    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dn;
+    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dw;
     Observation observation; // Member variable to store the observation
     // to prevent overriding
     Observation observation_kitchen; // Member variable to store the observation from kitchen
@@ -89,50 +92,50 @@ public:
 
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-        pose_sub_k = create_subscription<particle_filter_msgs::msg::PoseMsg>(
-                "/kitchen_person_pose", 1,
-                [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_kitchen(msg); });
+        pose_sub_k = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+                "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
+                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
 //        pose_sub_dn = create_subscription<particle_filter_msgs::msg::PoseMsg>(
 //                "/dining_room_person_pose", 1,
 //                [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_dining_room(msg); });
 
-        pose_sub_dw = create_subscription<particle_filter_msgs::msg::PoseMsg>(
-                "/doorway_person_pose", 1,
-                [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_doorway(msg); });
+        pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+                "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
+                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
 
 
-        auto door_outdoor_sub = create_subscription<particle_filter_msgs::msg::DoorStatus>(
+        auto door_outdoor_sub = create_subscription<std_msgs::msg::Bool>(
                 "/smartthings_sensors_door_outdoor", 10,
-                [this](const particle_filter_msgs::msg::DoorStatus::SharedPtr msg) { DoorOutdoorCallback(msg); });
-        auto door_bedroom_sub = create_subscription<particle_filter_msgs::msg::DoorStatus>(
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorOutdoorCallback(msg); });
+        auto door_bedroom_sub = create_subscription<std_msgs::msg::Bool>(
                 "/smartthings_sensors_door_bedroom", 10,
-                [this](const particle_filter_msgs::msg::DoorStatus::SharedPtr msg) { DoorBedroomCallback(msg); });
-        auto door_bathroom_sub = create_subscription<particle_filter_msgs::msg::DoorStatus>(
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBedroomCallback(msg); });
+        auto door_bathroom_sub = create_subscription<std_msgs::msg::Bool>(
                 "/smartthings_sensors_door_bathroom", 10,
-                [this](const particle_filter_msgs::msg::DoorStatus::SharedPtr msg) { DoorBathroomCallback(msg); });
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBathroomCallback(msg); });
     }
 
     std::array<double, 4> sigma_pos;
 
-    void DoorOutdoorCallback(const particle_filter_msgs::msg::DoorStatus::SharedPtr &msg) {
+    void DoorOutdoorCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
         std::cout << " ######################################################" << std::endl;
-        door_outdoor = msg->open;
-        std::cout << "msg->open;" << msg->open << std::endl;
+        door_outdoor = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
         std::cout << "doorstats->open;" << door_outdoor << std::endl;
     }
 
-    void DoorBedroomCallback(const particle_filter_msgs::msg::DoorStatus::SharedPtr &msg) {
+    void DoorBedroomCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
         std::cout << "********************************" << std::endl;
-        door_bedroom = msg->open;
-        std::cout << "bedroom msg->open;" << msg->open << std::endl;
+        door_bedroom = msg->data;
+        std::cout << "bedroom msg->open;" << msg->data << std::endl;
         std::cout << "bedoroom doorstats->open;" << door_bedroom << std::endl;
     }
 
-    void DoorBathroomCallback(const particle_filter_msgs::msg::DoorStatus::SharedPtr &msg) {
+    void DoorBathroomCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
         std::cout << "9999999999999999999999999999999999999" << std::endl;
-        door_bathroom = msg->open;
-        std::cout << "bsth msg->open;" << msg->open << std::endl;
+        door_bathroom = msg->data;
+        std::cout << "bsth msg->open;" << msg->data << std::endl;
         std::cout << "bedbathoroom doorstats->open;" << door_bathroom << std::endl;
     }
 
@@ -143,47 +146,45 @@ public:
     }
 
     Observation getObservation() {
-        if (observation_kitchen.name != ""){
-            std::cout << "observation in kitchen" << observation_kitchen.name  << std::endl;
+        if (observation_kitchen.name != "") {
+            std::cout << "observation in kitchen" << observation_kitchen.name << std::endl;
             return observation = observation_kitchen;
         }
 //        if (observation_dining.name != ""){
 //            return observation = observation_dining;
 //        }
-        else if(observation_doorway.name != ""){
+        else if (observation_doorway.name != "") {
             std::cout << "observation in doorway " << observation_doorway.name << std::endl;
             return observation = observation_doorway;
-        }
-        else{
+        } else {
             observation.name = "";
             return observation;
         }
     }
 
-    void PosePixCallback_kitchen(const particle_filter_msgs::msg::PoseMsg::SharedPtr &msg) {
+    void PosePixCallback_kitchen(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (msg != nullptr && !(msg->label == "") ) {
-                observation_kitchen.name = "kitchen";
-                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box;
-                float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-                for (int i = 0; i < 8; i++) {
-                    sum_x += bounding_box.corners[i].kp[0];
-                    sum_y += bounding_box.corners[i].kp[1];
-                    sum_z += bounding_box.corners[i].kp[2];
-                }
+        std::cout << " ************** Person detected in kitchen" << std::endl;
 
-                // Calculate the centroid
-                observation_kitchen.x = sum_x / 8.0;
-                observation_kitchen.y = sum_y / 8.0;
-                observation_kitchen.z = sum_z / 8.0;
+        if (!msg->objects.empty()) {
+            observation_kitchen.name = "kitchen";
+            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
+            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
+            for (int i = 0; i < 8; i++) {
+                sum_x += bounding_box.corners[i].kp[0];
+                sum_y += bounding_box.corners[i].kp[1];
+                sum_z += bounding_box.corners[i].kp[2];
+            }
 
-            std::cout << "Kitchen x: " << observation_kitchen.x << " y " << observation_kitchen.y  <<   " z " << observation_kitchen.z << std::endl;
+            // Calculate the centroid
+            observation_kitchen.x = sum_x / 8.0;
+            observation_kitchen.y = sum_y / 8.0;
+            observation_kitchen.z = sum_z / 8.0;
 
-
-            sigma_pos[0] = msg->dimensions_3d.data[0];
-                sigma_pos[1] = msg->dimensions_3d.data[1];
-                sigma_pos[2] = msg->dimensions_3d.data[2];
-                sigma_pos[3] = 0.1;
+            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
+            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
+            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+            sigma_pos[3] = 0.1;
 
         } else {
             std::cout << "no person detected in kitchen" << std::endl;
@@ -192,32 +193,30 @@ public:
         }
     }
 
-    void PosePixCallback_doorway(const particle_filter_msgs::msg::PoseMsg::SharedPtr &msg) {
+    void PosePixCallback_doorway(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (!(msg->label == "")) {
-                observation_doorway.name = "doorway";
-                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box;
-                float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-                for (int i = 0; i < 8; i++) {
-                    sum_x += bounding_box.corners[i].kp[0];
-                    sum_y += bounding_box.corners[i].kp[1];
-                    sum_z += bounding_box.corners[i].kp[2];
-                }
+        if (!msg->objects.empty()) {
+            observation_doorway.name = "doorway";
+            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
+            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
+            for (int i = 0; i < 8; i++) {
+                sum_x += bounding_box.corners[i].kp[0];
+                sum_y += bounding_box.corners[i].kp[1];
+                sum_z += bounding_box.corners[i].kp[2];
+            }
 
-                // Calculate the centroid
-                observation_doorway.x = sum_x / 8.0;
-                observation_doorway.y = sum_y / 8.0;
-                observation_doorway.z = sum_z / 8.0;
+            // Calculate the centroid
+            observation_doorway.x = sum_x / 8.0;
+            observation_doorway.y = sum_y / 8.0;
+            observation_doorway.z = sum_z / 8.0;
 
-                std::cout << "Doorway x: " << observation_doorway.x << " y " << observation_doorway.y  <<   " z " << observation_doorway.z << std::endl;
-
-                sigma_pos[0] = msg->dimensions_3d.data[0];
-                sigma_pos[1] = msg->dimensions_3d.data[1];
-                sigma_pos[2] = msg->dimensions_3d.data[2];
-                sigma_pos[3] = 0.1;
+            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
+            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
+            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+            sigma_pos[3] = 0.1;
 
         } else {
-            std::cout << "no person detected in dorway" << std::endl;
+            std::cout << "no person detected in doorway" << std::endl;
             observation_doorway.name = "";
 
         }
@@ -411,20 +410,20 @@ public:
         return t;
     }
 
-    geometry_msgs::msg::TransformStamped compute_mean_point(std::vector<Particle> particles){
+    geometry_msgs::msg::TransformStamped compute_mean_point(std::vector<Particle> particles) {
         //Compute the mean for all particles that have a reasonably good weight.
-    //    This is not part of the particle filter algorithm but rather an
-    //    addition to show the "best belief" for current position.
+        //    This is not part of the particle filter algorithm but rather an
+        //    addition to show the "best belief" for current position.
         double m_x = 5.0;
         double m_y = 10.0;
         double m_count = 2.0;
         int num_particles = particles.size();
         Particle best_particle;
-            for (int i = 0; i < num_particles; ++i) {
-                m_count += particles[i].weight;
-                m_x += particles[i].x * particles[i].weight;
-                m_y += particles[i].y * particles[i].weight;
-            }
+        for (int i = 0; i < num_particles; ++i) {
+            m_count += particles[i].weight;
+            m_x += particles[i].x * particles[i].weight;
+            m_y += particles[i].y * particles[i].weight;
+        }
 
         geometry_msgs::msg::TransformStamped t;
         t.header.stamp = rclcpp::Clock().now();
@@ -440,6 +439,11 @@ public:
         t.transform.rotation.w = cos(best_particle.theta / 2.0);
 //                std::cout << " x " << best_particle.x << " y " << best_particle.y << " z " << best_particle.z << std::endl;
         return t;
+    }
+
+    // Define a function to calculate the Euclidean distance between two points
+    double euclideanDistance(double x1, double y1, double x2, double y2) {
+        return std::sqrt(std::pow(x2 - x1, 2) + std::pow(y2 - y1, 2));
     }
 };
 
@@ -483,10 +487,10 @@ int main(int argc, char **argv) {
             // Define the bounds based on the house
             //std::pair<double, double> x_bound = std::make_pair(-1.0, 1.0);
             //std::pair<double, double> y_bound = std::make_pair(-1.0, 1.0);
-            
+
             std::pair<double, double> x_bound = std::make_pair(-3.0, 2.0);
             std::pair<double, double> y_bound = std::make_pair(-5.0, 1.0);
-            
+
             std::pair<double, double> z_bound = std::make_pair(0, 0);
             std::pair<double, double> theta_bound = std::make_pair(-3.1416, 3.1416);
 
@@ -533,7 +537,15 @@ int main(int argc, char **argv) {
                 // get observation and skip if no observation is there
                 std::vector<Observation> observations;
                 Observation obs_ = node->getObservation();
+
+                particle_filter.curr_camera_name = obs_.name;
+                if (particle_filter.curr_camera_name != particle_filter.prev_camera_name &&
+                    particle_filter.curr_camera_name != "") {
+                    particle_filter.previous_observation = {};
+                }
+
                 if (obs_.name != "") {
+                    //particle_filter.previous_observation.push_back(Eigen::Vector2d(obs_.x, obs_.y));
                     Eigen::Vector4d homogeneousPoint;
                     homogeneousPoint << obs_.x, obs_.y, obs_.z, 1.0;
 //                    node->publish_3d_point(homogeneousPoint[0], homogeneousPoint[1], homogeneousPoint[2], "zed_cam", 1,
@@ -541,23 +553,7 @@ int main(int argc, char **argv) {
 
                     std::string cam_name = obs_.name;
                     std::cout << "  cam_name  " << cam_name << std::endl;
-                     auto extrinsicParams = camera_extrinsics[cam_name];
-
-//                    Eigen::Vector4d TransformedPoint;
-//                    TransformedPoint << extrinsicParams(0, 0) * homogeneousPoint[0] +
-//                                        extrinsicParams(0, 1) * homogeneousPoint[1] +
-//                                        extrinsicParams(0, 2) * homogeneousPoint[2] +
-//                                        extrinsicParams(0, 3) * homogeneousPoint[3],
-//                            extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-//                            extrinsicParams(1, 2) * homogeneousPoint[2] + eobservations = {std::vector<Observation>} xtrinsicParams(1, 3) * homogeneousPoint[3],
-//                            extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-//                            extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-//                            extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-//                            extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-//
-//                    //std::cout << "  camera_extrinsics[obs_.name]  " << extrinsicParams << std::endl;
-//                    //node->publish_3d_point(TransformedPoint[0], TransformedPoint[1], TransformedPoint[2], "map", 0, 0,
-////                                           1);
+                    auto extrinsicParams = camera_extrinsics[cam_name];
 
                     // observation will always be from the same camera
                     observations.push_back(obs_);
@@ -581,11 +577,15 @@ int main(int argc, char **argv) {
                                                   extrinsicParams);
                     particle_filter.resample();
                 }
-//                node->publish_particles(particle_filter.particles);
+                // node->publish_particles(particle_filter.particles);
 
-// uncommetn
-//              particle_filter.resample();
+                // uncommetn
+                //particle_filter.resample();
                 // Calculate and output the average weighted error of the particle filter over all time steps so far.
+
+                particle_filter.prev_camera_name = particle_filter.curr_camera_name;
+
+
                 std::vector<Particle> particles = particle_filter.particles;
                 int num_particles = particles.size();
                 double highest_weight = 0.0;
@@ -599,6 +599,30 @@ int main(int argc, char **argv) {
                     }
                 }
 
+//                int highest_density = 0;
+//                int neighborhood_radius = 2;
+//                // Modify the loop to find the best particle based on density
+//                for (int i = 0; i < num_particles; ++i) {
+//                    int particle_density = 0; // Initialize the particle density count
+//
+//                    // Count the number of particles within a local neighborhood around the current particle
+//                    for (int j = 0; j < num_particles; ++j) {
+//                        if (i != j) { // Exclude the current particle itself
+//                            double distance = node->euclideanDistance(particles[i].x, particles[i].y, particles[j].x,
+//                                                                particles[j].y);
+//                            if (distance <=
+//                                neighborhood_radius) { // Check if the particle is within the neighborhood radius
+//                                ++particle_density;
+//                            }
+//                        }
+//                    }
+//
+//                    // Update the best particle based on density
+//                    if (particle_density > highest_density) {
+//                        highest_density = particle_density;
+//                        best_particle = particles[i];
+//                    }
+//                }
 
 //                // Fill in the message
                 geometry_msgs::msg::TransformStamped t;

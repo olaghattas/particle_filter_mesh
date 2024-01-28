@@ -58,14 +58,16 @@ private:
     // Vector of weights of all particles
     std::vector<double> weights;
 
-
-
-
 public:
+    bool no_readings = true;
     // map with the mesh vertices
     std::unordered_map<std::string, Eigen::MatrixXd> mesh_vert_map_;
     // Set of current particles
     std::vector<Particle> particles;
+    std::string prev_camera_name = "";
+    std::string curr_camera_name = "";
+    //Store previous observations
+    std::vector<Eigen::Vector2d> previous_observation;
 
     // Constructor
     ParticleFilter(int num) : num_particles(num), is_initialized(false) {}
@@ -97,6 +99,7 @@ public:
     bool check_particle_at(const std::string &loc, Eigen::Vector3d point);
     void write_to_file(std::string filename);
     float sample(float mean, float variance);
+    void particles_in_range(std::pair<double, double> x_bound, std::pair<double, double> y_bound, int ind_start);
 
 };
 
