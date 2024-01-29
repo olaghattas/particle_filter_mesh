@@ -63,7 +63,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
 
     std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
 
-    auto mesh_file = (pkg_dir / "config" / "collision_mesh.obj").string();
+    auto mesh_file = (pkg_dir / "config" / "sajay_coll_new.obj").string();
 //    std::string mesh_file = "/home/olagh/smart-home/src/smart-home/external/particle_filter_mesh/config/collision_mesh.obj";
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
@@ -109,7 +109,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     for (auto &p: particles) {
         // only 80 percent of the oarticle will be directed in the direction of the vector the rest will be random
         // Calculate average displacement vector from available readings
-        if (previous_observation.size() > 2 ){ //&& p.id < num_particles * 0.8) {
+        if (previous_observation.size() > 2) { //&& p.id < num_particles * 0.8) {
             Eigen::Vector2d avg_displacement(0.0, 0.0);
             for (int i = 0; i < previous_observation.size(); i++) {
                 // Extract x and y coordinates from each reading
@@ -233,21 +233,21 @@ void ParticleFilter::updateWeights(double std_landmark[],
 
     std::cout << "update2 &&&&&&&&&&&&&&&&&&&&&& " << std::endl;
     TransformedPoint <<
-                    extrinsicParams(0, 0) * homogeneousPoint[0] + extrinsicParams(0, 1) * homogeneousPoint[1] +
-                    extrinsicParams(0, 2) * homogeneousPoint[2] + extrinsicParams(0, 3) * homogeneousPoint[3],
-                    extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-                    extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-                    extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-                    extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-                    extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-                    extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+                     extrinsicParams(0, 0) * homogeneousPoint[0] + extrinsicParams(0, 1) * homogeneousPoint[1] +
+                     extrinsicParams(0, 2) * homogeneousPoint[2] + extrinsicParams(0, 3) * homogeneousPoint[3],
+            extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+            extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+            extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+            extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+            extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+            extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
 
     // std::cout << " Observation ::: x " << TransformedPoint[0] << " y " << TransformedPoint[1] << " z "
     //           << TransformedPoint[2] << std::endl;
 
     if (previous_observation.size() < 10)
         previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
-    else{
+    else {
         // Remove the oldest observation
         previous_observation.erase(previous_observation.begin());
 
@@ -306,7 +306,7 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
 
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
     std::vector<std::string>
-            lndmarks = {"obstacles", "bedroom_door", "bathroom_door", "outside_door", "obstacles_1"};
+            lndmarks = {"obstacles", "bedroom_door", "bathroom_door", "door", "obstacle_1", "obstacle_3"};
 //    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " "
 //              << doors_status[2] << std::endl;
 
@@ -340,6 +340,11 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
             }
         } else if (check_particle_at(lndmarks[4], point)) {
             // obstacle  1 (not door)
+            particles[i] = old_particles[i];
+            particles[i].weight = 0.0;
+
+        } else if (check_particle_at(lndmarks[5], point)) {
+            // obstacle  3 (not door)
             particles[i] = old_particles[i];
             particles[i].weight = 0.0;
 
