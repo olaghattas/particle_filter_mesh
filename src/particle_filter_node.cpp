@@ -97,7 +97,7 @@ public:
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
         pose_sub_dn = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/dining_room_person_pose", 1,
+                "/zed_dining_room/zed_node_doorway/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_dining_room(msg); });
 
         pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
