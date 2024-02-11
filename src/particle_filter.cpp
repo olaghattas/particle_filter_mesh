@@ -64,7 +64,6 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
     std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
 
     auto mesh_file = (pkg_dir / "config" / "sajay_coll_new.obj").string();
-//    std::string mesh_file = "/home/olagh/smart-home/src/smart-home/external/particle_filter_mesh/config/collision_mesh.obj";
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
@@ -109,7 +108,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     for (auto &p: particles) {
         // only 80 percent of the oarticle will be directed in the direction of the vector the rest will be random
         // Calculate average displacement vector from available readings
-        if (previous_observation.size() > 2) { //&& p.id < num_particles * 0.8) {
+        if (false){ //(previous_observation.size() > 2) { //&& p.id < num_particles * 0.8) {
             Eigen::Vector2d avg_displacement(0.0, 0.0);
             for (int i = 0; i < previous_observation.size(); i++) {
                 // Extract x and y coordinates from each reading

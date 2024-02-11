@@ -80,11 +80,11 @@ public:
 
         map_cam_aptag["doorway"] = "tag_" + std::string(std::getenv("tag_doorway")) + "_zed";
         map_cam_aptag["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen")) + "_zed";
-        //map_cam_aptag["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room")) + "_zed";
+        map_cam_aptag["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room")) + "_zed";
 
         map_cam_aptag_un["doorway"] = "aptag_" + std::string(std::getenv("tag_doorway"));
         map_cam_aptag_un["kitchen"] = "aptag_" + std::string(std::getenv("tag_kitchen"));
-        //map_cam_aptag_un["dining_room"] = "aptag_" + std::string(std::getenv("tag_dining_room"));
+        map_cam_aptag_un["dining_room"] = "aptag_" + std::string(std::getenv("tag_dining_room"));
 
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("marker", 10);
 
@@ -96,9 +96,9 @@ public:
                 "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
-//        pose_sub_dn = create_subscription<particle_filter_msgs::msg::PoseMsg>(
-//                "/dining_room_person_pose", 1,
-//                [this](const particle_filter_msgs::msg::PoseMsg::SharedPtr msg) { PosePixCallback_dining_room(msg); });
+        pose_sub_dn = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+                "/dining_room_person_pose", 1,
+                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_dining_room(msg); });
 
         pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
                 "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
@@ -146,20 +146,38 @@ public:
     }
 
     Observation getObservation() {
+        float distance_to_person = 100.0;
+//        std::string name = "";
+
         if (observation_kitchen.name != "") {
+            distance_to_person = observation_kitchen.z;
             std::cout << "observation in kitchen" << observation_kitchen.name << std::endl;
-            return observation = observation_kitchen;
+            std::cout << "9999999999999999999999999999999999999 " << observation_kitchen.z << std::endl;
+            observation = observation_kitchen;
         }
 //        if (observation_dining.name != ""){
 //            return observation = observation_dining;
 //        }
-        else if (observation_doorway.name != "") {
+        if (observation_doorway.name != "") {
+            if (distance_to_person > observation_doorway.z) {
+                distance_to_person = observation_doorway.z;
+                observation = observation_doorway;
+            }
             std::cout << "observation in doorway " << observation_doorway.name << std::endl;
-            return observation = observation_doorway;
-        } else {
-            observation.name = "";
-            return observation;
+//            return observation = observation_doorway;
         }
+        if (observation_dining.name != "") {
+            if (distance_to_person > observation_dining.z) {
+                distance_to_person = observation_dining.z;
+                observation = observation_dining;
+            }
+        }
+
+        if (distance_to_person == 100.0){
+            observation.name = "";
+        }
+        return observation;
+
     }
 
     void PosePixCallback_kitchen(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
@@ -222,35 +240,33 @@ public:
         }
     }
 
-//    void PosePixCallback_dining_room(const particle_filter_msgs::msg::PoseMsg::SharedPtr &msg) {
-//        //# 2 -> POSE_38
-//        if (!(msg->label == "")) {
-//                observation_dining.name = "dining_room";
-//                zed_interfaces::msg::BoundingBox3D bounding_box = msg->bounding_box;
-//                float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-//                for (int i = 0; i < 8; i++) {
-//                    sum_x += bounding_box.corners[i].kp[0];
-//                    sum_y += bounding_box.corners[i].kp[1];
-//                    sum_z += bounding_box.corners[i].kp[2];
-//                }
-//
-//                // Calculate the centroid
-//                observation_dining.x = sum_x / 8.0;
-//                observation_dining.y = sum_y / 8.0;
-//                observation_dining.z = sum_z / 8.0;
-//
-//                sigma_pos[0] = msg->dimensions_3d.data[0];
-//                sigma_pos[1] = msg->dimensions_3d.data[1];
-//                sigma_pos[2] = msg->dimensions_3d.data[2];
-//                sigma_pos[3] = 0.1;
-//
-//        } else {
-//            std::cout << "no person detected" << std::endl;
-//            observation_dining.name = "";
-//
-//        }
-//    }
+    void PosePixCallback_dining_room(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+        if (!msg->objects.empty()) {
+            observation_dining.name = "dining_room";
+            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
+            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
+            for (int i = 0; i < 8; i++) {
+                sum_x += bounding_box.corners[i].kp[0];
+                sum_y += bounding_box.corners[i].kp[1];
+                sum_z += bounding_box.corners[i].kp[2];
+            }
 
+            // Calculate the centroid
+            observation_dining.x = sum_x / 8.0;
+            observation_dining.y = sum_y / 8.0;
+            observation_dining.z = sum_z / 8.0;
+
+            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
+            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
+            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+            sigma_pos[3] = 0.1;
+
+        } else {
+            std::cout << "no person detected in doorway" << std::endl;
+            observation_dining.name = "";
+
+        }
+    }
 
     void publish_3d_point(float x, float y, float z, std::string frame_id, float r, float g, float b) {
         auto marker_msg = std::make_shared<visualization_msgs::msg::Marker>();
@@ -314,7 +330,7 @@ public:
     void cam_extrinsics_from_tf() {
 
 //        std::vector<std::string> cams{"dining", "kitchen", "bedroom", "livingroom", "hallway", "doorway"};
-        std::vector<std::string> cams{"kitchen", "doorway"};
+        std::vector<std::string> cams{"kitchen", "doorway", "dining_room"};
 //        std::vector<std::pair<std::string, int>> cams{"zed_kitchen_left_camera_frame"};
 
         // Loop over the keys of map_cam_aptag using a range-based for loop
@@ -468,6 +484,13 @@ int main(int argc, char **argv) {
             camera_extrinsics = node->get_cam_extrinsic_matrix();
 
             if (camera_extrinsics.size() != 0) {
+//                for (const auto &entry: camera_extrinsics) {
+//                    const std::string &camera_name = entry.first;
+//                    const Eigen::Matrix<double, 4, 4, Eigen::RowMajor> &extrinsic_matrix = entry.second;
+//                    auto t_ = node->publish_transform(extrinsic_matrix, "unity", "zed_cam_" + camera_name);
+//                    tf_static_broadcaster_->sendTransform(t_);
+//                }
+
                 not_initialized = false;
             }
         } else {
@@ -506,8 +529,7 @@ int main(int argc, char **argv) {
                 const std::string &camera_name = entry.first;
                 const Eigen::Matrix<double, 4, 4, Eigen::RowMajor> &extrinsic_matrix = entry.second;
 
-                auto t_ = node->publish_transform(extrinsic_matrix, "unity", "zed_cam" + camera_name);
-
+                auto t_ = node->publish_transform(extrinsic_matrix, "unity", "zed_cam_" + camera_name);
                 tf_static_broadcaster_->sendTransform(t_);
             }
 
@@ -539,10 +561,10 @@ int main(int argc, char **argv) {
                 Observation obs_ = node->getObservation();
 
                 particle_filter.curr_camera_name = obs_.name;
-                if (particle_filter.curr_camera_name != particle_filter.prev_camera_name &&
-                    particle_filter.curr_camera_name != "") {
-                    particle_filter.previous_observation = {};
-                }
+//                if (particle_filter.curr_camera_name != particle_filter.prev_camera_name &&
+//                    particle_filter.curr_camera_name != "") {
+//                    particle_filter.previous_observation = {};
+//                }
 
                 if (obs_.name != "") {
                     //particle_filter.previous_observation.push_back(Eigen::Vector2d(obs_.x, obs_.y));
