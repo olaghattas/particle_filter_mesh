@@ -97,7 +97,7 @@ public:
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
         pose_sub_dn = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_dining_room/zed_node_doorway/body_trk/skeletons", 1,
+                "/zed_dining_room/zed_node_dining_room/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_dining_room(msg); });
 
         pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
@@ -172,7 +172,6 @@ public:
         if (observation_kitchen.name != "") {
             distance_to_person = observation_kitchen.x;
             std::cout << "observation in kitchen" << observation_kitchen.name << std::endl;
-            std::cout << "9999999999999999999999999999999999999 " << observation_kitchen.z << std::endl;
             observation = observation_kitchen;
         }
 
@@ -196,6 +195,7 @@ public:
         if (distance_to_person == 100.0){
             observation.name = "";
         }
+        std::cout << "observation in " << observation.name << std::endl;
         return observation;
 
     }
