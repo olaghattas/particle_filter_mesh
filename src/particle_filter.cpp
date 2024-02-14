@@ -96,8 +96,8 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 //    std::normal_distribution<double> zNoise(0, std_pos[2]);
 //    std::normal_distribution<double> yawNoise(0, std_pos[3]);
 
-    std::normal_distribution<double> xNoise(0, 0.01);
-    std::normal_distribution<double> yNoise(0, 0.01);
+    std::normal_distribution<double> xNoise(0, 0.25);
+    std::normal_distribution<double> yNoise(0, 0.25);
     std::normal_distribution<double> zNoise(0, 0.03);
     std::normal_distribution<double> yawNoise(0, 0.03);
 
@@ -152,16 +152,26 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 
     // use last 20 particle in areas where cameras can view
     // for now this will happen at all times later will dedpend on observation availability
-    if (no_readings) {
-        std::pair<double, double> x_kitchen_bound = std::make_pair(0, 2.0);
-        std::pair<double, double> y_kitchen_bound = std::make_pair(-2, 0.25);
-        std::pair<double, double> x_dining_bound = std::make_pair(0.6, 2.3);
-        std::pair<double, double> y_dining_bound = std::make_pair(1.5, 3.7);
+//    if (no_readings) {
+//        std::pair<double, double> x_kitchen_bound = std::make_pair(0, 2.0);
+//        std::pair<double, double> y_kitchen_bound = std::make_pair(-2, 0.25);
+//        std::pair<double, double> x_dining_bound = std::make_pair(0.6, 2.3);
+//        std::pair<double, double> y_dining_bound = std::make_pair(1.5, 3.7);
+//
+//        ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
+//        ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
+//    }
 
-        ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
-        ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
-    }
+    std::pair<double, double> x_kitchen_bound = std::make_pair(0, 2.0);
+    std::pair<double, double> y_kitchen_bound = std::make_pair(-2, 0.25);
+    std::pair<double, double> x_dining_bound = std::make_pair(0.6, 2.3);
+    std::pair<double, double> y_dining_bound = std::make_pair(1.5, 3.7);
+    std::pair<double, double> x_doorway_bound = std::make_pair(-3, -0.64);
+    std::pair<double, double> y_doorway_bound = std::make_pair(0.5, 1.5);
 
+    ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
+    ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
+    ParticleFilter::particles_in_range(x_doorway_bound, y_doorway_bound, 20);
     ParticleFilter::enforce_non_collision(particles_before, doors_status);
 
 //    write_to_file("after_motion_model.txt");

@@ -145,32 +145,52 @@ public:
         return {door_bedroom, door_bathroom, door_outdoor};
     }
 
+//    Observation getObservation() {
+//        if (observation_kitchen.name != "") {
+//            std::cout << "observation in kitchen" << observation_kitchen.name << std::endl;
+//            return observation = observation_kitchen;
+//        }
+////        if (observation_dining.name != ""){
+////            return observation = observation_dining;
+////        }
+//        else if (observation_doorway.name != "") {
+//            std::cout << "observation in doorway " << observation_doorway.name << std::endl;
+//            return observation = observation_doorway;
+//        } else if (observation_dining.name != "") {
+//            std::cout << "observation in dining " << observation_dining.name << std::endl;
+//            return observation = observation_dining;
+//        } else {
+//            observation.name = "";
+//            return observation;
+//        }
+//    }
+
     Observation getObservation() {
         float distance_to_person = 100.0;
-//        std::string name = "";
+        std::string name = "";
 
         if (observation_kitchen.name != "") {
-            distance_to_person = observation_kitchen.z;
+            distance_to_person = observation_kitchen.x;
             std::cout << "observation in kitchen" << observation_kitchen.name << std::endl;
             std::cout << "9999999999999999999999999999999999999 " << observation_kitchen.z << std::endl;
             observation = observation_kitchen;
         }
-//        if (observation_dining.name != ""){
-//            return observation = observation_dining;
-//        }
+
         if (observation_doorway.name != "") {
-            if (distance_to_person > observation_doorway.z) {
-                distance_to_person = observation_doorway.z;
+            if (distance_to_person > observation_doorway.x) {
+                distance_to_person = observation_doorway.x;
                 observation = observation_doorway;
             }
             std::cout << "observation in doorway " << observation_doorway.name << std::endl;
 //            return observation = observation_doorway;
         }
         if (observation_dining.name != "") {
-            if (distance_to_person > observation_dining.z) {
-                distance_to_person = observation_dining.z;
+            if (distance_to_person > observation_dining.x) {
+                distance_to_person = observation_dining.x;
                 observation = observation_dining;
+                std::cout << "observation in doorway " << observation_doorway.name << std::endl;
             }
+
         }
 
         if (distance_to_person == 100.0){
@@ -335,24 +355,32 @@ public:
 
         // Loop over the keys of map_cam_aptag using a range-based for loop
         for (const auto &cam: cams) {
-            // Get transformation matrix from camera to aptag /// from aptag detection
-            std::cout << " cAM_cam " << cam << std::endl;
-            std::cout << "  " << map_cam_aptag[cam] << "  " << "zed_" + cam + "_left_camera_frame" << std::endl;
+            if (cam == "doorway") {
+                std::cout << " cam_cam " << cam << std::endl;
+                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = transform_tf("unity",
+                                                                                         "zed_doorway_cam");
+                cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
+            } else {
+                // Get transformation matrix from camera to aptag /// from aptag detection
+                std::cout << " cam_cam " << cam << std::endl;
+                std::cout << "  " << map_cam_aptag[cam] << "  " << "zed_" + cam + "_left_camera_frame" << std::endl;
 //
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf(map_cam_aptag[cam],
-                                                                                       "zed_" + cam +
-                                                                                       "_left_camera_frame");
-            std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
+                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf(map_cam_aptag[cam],
+                                                                                           "zed_" + cam +
+                                                                                           "_left_camera_frame");
+                std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
 //
-            // Get transformation matrix from map to waptag
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity", map_cam_aptag_un[cam]);
-            std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
+                // Get transformation matrix from map to waptag
+                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity",
+                                                                                            map_cam_aptag_un[cam]);
+                std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
 //
 //            // Get transformation matrix from map to aptag
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = t_waptag_to_cam * t_cam_to_aptag;
-            std::cout << " t_cam_to_map " << t_cam_to_map << std::endl;
+                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = t_waptag_to_cam * t_cam_to_aptag;
+                std::cout << " t_cam_to_map " << t_cam_to_map << std::endl;
 //
-            cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
+                cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
+            }
         }
     }
 
