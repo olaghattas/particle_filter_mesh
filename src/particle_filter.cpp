@@ -72,6 +72,16 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         mesh_vert_map_[name] = verts;
     }
 
+//    TODO : change to mesh with view point
+    auto view_points_mesh_file = (pkg_dir / "config" / "sajay_coll_new.obj").string();
+
+    auto [view_points_mesh_verts, view_points_mesh_names] = shr_utils::load_meshes(view_points_mesh_file);
+    for (int i = 0; i < mesh_names.size(); i++) {
+        auto name = mesh_names[i];
+        auto verts = mesh_verts[i];
+        view_points_mesh_vert_map_[name] = verts;
+    }
+
 }
 
 void ParticleFilter::particles_in_range(std::pair<double, double> x_bound, std::pair<double, double> y_bound,
@@ -89,7 +99,7 @@ void ParticleFilter::particles_in_range(std::pair<double, double> x_bound, std::
 }
 
 void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
-                                  std::vector<bool> doors_status) {
+                                  std::vector<bool> doors_status, std::string observation) {
     std::default_random_engine gen;
 //    std::normal_distribution<double> xNoise(0, std_pos[0]);
 //    std::normal_distribution<double> yNoise(0, std_pos[1]);
@@ -108,7 +118,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     for (auto &p: particles) {
         // only 80 percent of the oarticle will be directed in the direction of the vector the rest will be random
         // Calculate average displacement vector from available readings
-        if (false){ //(previous_observation.size() > 2) { //&& p.id < num_particles * 0.8) {
+        if (false) { //(previous_observation.size() > 2) { //&& p.id < num_particles * 0.8) {
             Eigen::Vector2d avg_displacement(0.0, 0.0);
             for (int i = 0; i < previous_observation.size(); i++) {
                 // Extract x and y coordinates from each reading
@@ -172,7 +182,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
     ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
     ParticleFilter::particles_in_range(x_doorway_bound, y_doorway_bound, 20);
-    ParticleFilter::enforce_non_collision(particles_before, doors_status);
+    ParticleFilter::enforce_non_collision(particles_before, doors_status, observation);
 
 //    write_to_file("after_motion_model.txt");
 
@@ -310,17 +320,31 @@ bool ParticleFilter::check_particle_at(const std::string &loc, Eigen::Vector3d p
     return shr_utils::PointInMesh(point, verts, verts2d);
 }
 
+
+bool ParticleFilter::check_particle_at_cam_view(const std::string &loc, Eigen::Vector3d point) {
+    if (view_points_mesh_vert_map_.find(loc) == view_points_mesh_vert_map_.end()) {
+        return false;
+    }
+    auto verts = view_points_mesh_vert_map_.at(loc);
+    Eigen::MatrixXd verts2d = verts.block(0, 0, 2, verts.cols());
+    return shr_utils::PointInMesh(point, verts, verts2d);
+}
+
 void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_particles,
-                                           std::vector<bool> doors_status) {
+                                           std::vector<bool> doors_status, std::string observation) {
+
 
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
     std::vector<std::string>
             lndmarks = {"obstacles", "bedroom_door", "bathroom_door", "door", "obstacle_1", "obstacle_3"};
+    std::vector<std::string> view_point = {"cam_door", "cam_dining", "cam_kitchen"};
 //    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " "
 //              << doors_status[2] << std::endl;
 
     for (int i = 0; i < num_particles; ++i) {
         Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
+
+        // ###### COLLSIONS WITH OBSTACLES ########
         if (check_particle_at(lndmarks[0], point)) {
             // obstacle (not door)
             particles[i] = old_particles[i];
@@ -356,8 +380,26 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
             // obstacle  3 (not door)
             particles[i] = old_particles[i];
             particles[i].weight = 0.0;
+        }
 
+            // ###### POINTS GOING INTO CAMERA VIEW POINT WHEN NO PERSON IS THERE ########
+            // doesnt allow the particle to go into view points when observation is not from that camera
+//         create a mesh of the camera view point
+        else if (observation != "doorway" && check_particle_at_cam_view(view_point[0], point)) {
+            // obstacle  3 (not door)
+            particles[i] = old_particles[i];
+            particles[i].weight = 0.0;
+        } else if (observation != "dining" && check_particle_at_cam_view(view_point[1], point)) {
+            // obstacle  3 (not door)
+            particles[i] = old_particles[i];
+            particles[i].weight = 0.0;
+        } else if (observation != "kitchen" && check_particle_at_cam_view(view_point[2], point)) {
+            // obstacle  3 (not door)
+            particles[i] = old_particles[i];
+            particles[i].weight = 0.0;
         }
     }
+
+
 }
 

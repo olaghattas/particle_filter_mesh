@@ -62,6 +62,8 @@ public:
     bool no_readings = true;
     // map with the mesh vertices
     std::unordered_map<std::string, Eigen::MatrixXd> mesh_vert_map_;
+    std::unordered_map<std::string, Eigen::MatrixXd> view_points_mesh_vert_map_;
+
     // Set of current particles
     std::vector<Particle> particles;
     std::string prev_camera_name = "";
@@ -79,7 +81,7 @@ public:
               std::pair<double, double> theta);
 
     void motion_model(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
-                      std::vector<bool> doors_status);
+                      std::vector<bool> doors_status, std::string observation);
 
     void updateWeights(double std_landmark[],
                        std::vector<Observation> observations,
@@ -95,8 +97,9 @@ public:
     }
 
     void enforce_non_collision(const std::vector <Particle> &old_particles,
-                                               std::vector<bool> doors_status);
+                                               std::vector<bool> doors_status, std::string observation);
     bool check_particle_at(const std::string &loc, Eigen::Vector3d point);
+    bool check_particle_at_cam_view(const std::string &loc, Eigen::Vector3d point);
     void write_to_file(std::string filename);
     float sample(float mean, float variance);
     void particles_in_range(std::pair<double, double> x_bound, std::pair<double, double> y_bound, int ind_start);

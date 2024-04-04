@@ -145,26 +145,6 @@ public:
         return {door_bedroom, door_bathroom, door_outdoor};
     }
 
-//    Observation getObservation() {
-//        if (observation_kitchen.name != "") {
-//            std::cout << "observation in kitchen" << observation_kitchen.name << std::endl;
-//            return observation = observation_kitchen;
-//        }
-////        if (observation_dining.name != ""){
-////            return observation = observation_dining;
-////        }
-//        else if (observation_doorway.name != "") {
-//            std::cout << "observation in doorway " << observation_doorway.name << std::endl;
-//            return observation = observation_doorway;
-//        } else if (observation_dining.name != "") {
-//            std::cout << "observation in dining " << observation_dining.name << std::endl;
-//            return observation = observation_dining;
-//        } else {
-//            observation.name = "";
-//            return observation;
-//        }
-//    }
-
     Observation getObservation() {
         float distance_to_person = 100.0;
         std::string name = "";
@@ -573,81 +553,83 @@ int main(int argc, char **argv) {
                     node->publish_particles(particle_filter.particles);
 
                 } else {
+
+                    // get observation and skip if no observation is there
+                    std::vector<Observation> observations;
+                    Observation obs_ = node->getObservation();
+
+                    particle_filter.curr_camera_name = obs_.name;
+
                     /// not being used delta_t
 //                    auto end = std::chrono::high_resolution_clock::now();
 //                    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - beg);
 //                    double delta_t = duration.count() / 1000000.0;
                     double delta_t = 0.1;
 
-                    particle_filter.motion_model(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_);
+                    particle_filter.motion_model(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
                     node->publish_particles(particle_filter.particles);
-                }
 
 
-                // get observation and skip if no observation is there
-                std::vector<Observation> observations;
-                Observation obs_ = node->getObservation();
 
-                particle_filter.curr_camera_name = obs_.name;
 //                if (particle_filter.curr_camera_name != particle_filter.prev_camera_name &&
 //                    particle_filter.curr_camera_name != "") {
 //                    particle_filter.previous_observation = {};
 //                }
 
-                if (obs_.name != "") {
-                    //particle_filter.previous_observation.push_back(Eigen::Vector2d(obs_.x, obs_.y));
-                    Eigen::Vector4d homogeneousPoint;
-                    homogeneousPoint << obs_.x, obs_.y, obs_.z, 1.0;
+                    if (!obs_.name.empty()) {
+                        //particle_filter.previous_observation.push_back(Eigen::Vector2d(obs_.x, obs_.y));
+                        Eigen::Vector4d homogeneousPoint;
+                        homogeneousPoint << obs_.x, obs_.y, obs_.z, 1.0;
 //                    node->publish_3d_point(homogeneousPoint[0], homogeneousPoint[1], homogeneousPoint[2], "zed_cam", 1,
 //                                           0, 0);
 
-                    std::string cam_name = obs_.name;
-                    std::cout << "  cam_name  " << cam_name << std::endl;
-                    auto extrinsicParams = camera_extrinsics[cam_name];
+                        std::string cam_name = obs_.name;
+                        std::cout << "  cam_name  " << cam_name << std::endl;
+                        auto extrinsicParams = camera_extrinsics[cam_name];
 
-                    // observation will always be from the same camera
-                    observations.push_back(obs_);
+                        // observation will always be from the same camera
+                        observations.push_back(obs_);
 
-                    // simulate the addition of noise to noiseless observation data.
-                    std::vector<Observation> noisy_observations;
-                    Observation obs;
+                        // simulate the addition of noise to noiseless observation data.
+                        std::vector<Observation> noisy_observations;
+                        Observation obs;
 
-                    // which is currently 1
-                    for (int j = 0; j < observations.size(); ++j) {
-                        n_x = N_obs_x(gen);
-                        n_y = N_obs_y(gen);
-                        obs = observations[j];
-                        obs.x = obs.x + n_x;
-                        obs.y = obs.y + n_y;
-                        noisy_observations.push_back(obs);
-                    }
-
-                    // Update the weights and resample
-                    particle_filter.updateWeights(sigma_landmark, noisy_observations,
-                                                  extrinsicParams);
-                    particle_filter.resample();
-
-                    // node->publish_particles(particle_filter.particles);
-
-                    // uncommetn
-                    //particle_filter.resample();
-                    // Calculate and output the average weighted error of the particle filter over all time steps so far.
-
-                    particle_filter.prev_camera_name = particle_filter.curr_camera_name;
-
-
-                    std::vector<Particle> particles = particle_filter.particles;
-                    int num_particles = particles.size();
-                    double highest_weight = 0.0;
-
-                    Particle best_particle;
-
-                    for (int i = 0; i < num_particles; ++i) {
-                        if (particles[i].weight > highest_weight) {
-                            highest_weight = particles[i].weight;
-                            best_particle = particles[i];
+                        // which is currently 1
+                        for (int j = 0; j < observations.size(); ++j) {
+                            n_x = N_obs_x(gen);
+                            n_y = N_obs_y(gen);
+                            obs = observations[j];
+                            obs.x = obs.x + n_x;
+                            obs.y = obs.y + n_y;
+                            noisy_observations.push_back(obs);
                         }
-                    }
+
+                        // Update the weights and resample
+                        particle_filter.updateWeights(sigma_landmark, noisy_observations,
+                                                      extrinsicParams);
+                        particle_filter.resample();
+
+                        // node->publish_particles(particle_filter.particles);
+
+                        // uncommetn
+                        //particle_filter.resample();
+                        // Calculate and output the average weighted error of the particle filter over all time steps so far.
+
+                        particle_filter.prev_camera_name = particle_filter.curr_camera_name;
+
+
+                        std::vector<Particle> particles = particle_filter.particles;
+                        int num_particles = particles.size();
+                        double highest_weight = 0.0;
+
+                        Particle best_particle;
+
+                        for (int i = 0; i < num_particles; ++i) {
+                            if (particles[i].weight > highest_weight) {
+                                highest_weight = particles[i].weight;
+                                best_particle = particles[i];
+                            }
+                        }
 
 //                int highest_density = 0;
 //                int neighborhood_radius = 2;
@@ -675,26 +657,26 @@ int main(int argc, char **argv) {
 //                }
 
 //                // Fill in the message
-                    geometry_msgs::msg::TransformStamped t;
-                    t.header.stamp = rclcpp::Clock().now();
-                    t.header.frame_id = "unity";
-                    /// should be whatever the code is expecting the name to be
-                    t.child_frame_id = "nathan";
-                    t.transform.translation.x = best_particle.x;
-                    t.transform.translation.y = best_particle.y;
-                    t.transform.translation.z = best_particle.z;
-                    t.transform.rotation.x = 0;
-                    t.transform.rotation.y = 0;
-                    t.transform.rotation.z = sin(best_particle.theta / 2.0);
-                    t.transform.rotation.w = cos(best_particle.theta / 2.0);
+                        geometry_msgs::msg::TransformStamped t;
+                        t.header.stamp = rclcpp::Clock().now();
+                        t.header.frame_id = "unity";
+                        /// should be whatever the code is expecting the name to be
+                        t.child_frame_id = "nathan";
+                        t.transform.translation.x = best_particle.x;
+                        t.transform.translation.y = best_particle.y;
+                        t.transform.translation.z = best_particle.z;
+                        t.transform.rotation.x = 0;
+                        t.transform.rotation.y = 0;
+                        t.transform.rotation.z = sin(best_particle.theta / 2.0);
+                        t.transform.rotation.w = cos(best_particle.theta / 2.0);
 //                std::cout << " x " << best_particle.x << " y " << best_particle.y << " z " << best_particle.z << std::endl;
 //                t = node -> compute_mean_point(particle_filter.particles);
-                    tf_broadcaster_->sendTransform(t);
+                        tf_broadcaster_->sendTransform(t);
+                    }
+                    // because we want to listen to observations in this loop as well so we need to spin the node
+                    rclcpp::spin_some(node);
                 }
-                // because we want to listen to observations in this loop as well so we need to spin the node
-                rclcpp::spin_some(node);
             }
-
         }
         rclcpp::spin_some(node);
     }
