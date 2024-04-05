@@ -172,7 +172,7 @@ public:
 
         }
 
-        if (distance_to_person == 100.0){
+        if (distance_to_person == 100.0) {
             observation.name = "";
         }
         std::cout << "observation in " << observation.name << std::endl;
@@ -540,7 +540,8 @@ int main(int argc, char **argv) {
                 auto t_ = node->publish_transform(extrinsic_matrix, "unity", "zed_cam_" + camera_name);
                 tf_static_broadcaster_->sendTransform(t_);
             }
-
+            int count_empty = 0;
+            int count_threshold = 5;
             while (running) {
 //                auto beg = std::chrono::high_resolution_clock::now();
 
@@ -559,6 +560,18 @@ int main(int argc, char **argv) {
                     Observation obs_ = node->getObservation();
 
                     particle_filter.curr_camera_name = obs_.name;
+                    if (particle_filter.curr_camera_name != particle_filter.prev_camera_name &&
+                        !particle_filter.curr_camera_name.empty()) {
+                        particle_filter.previous_observation = {};
+                    }
+
+                    // if curr camera is empty for then remove prev observations
+                    if (particle_filter.curr_camera_name.empty()) {
+                        if (count_empty > count_threshold) {
+                            particle_filter.previous_observation = {};
+                        }
+                        count_empty++;
+                    }
 
                     /// not being used delta_t
 //                    auto end = std::chrono::high_resolution_clock::now();
@@ -569,12 +582,6 @@ int main(int argc, char **argv) {
                     particle_filter.motion_model(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
                     node->publish_particles(particle_filter.particles);
 
-
-
-//                if (particle_filter.curr_camera_name != particle_filter.prev_camera_name &&
-//                    particle_filter.curr_camera_name != "") {
-//                    particle_filter.previous_observation = {};
-//                }
 
                     if (!obs_.name.empty()) {
                         //particle_filter.previous_observation.push_back(Eigen::Vector2d(obs_.x, obs_.y));

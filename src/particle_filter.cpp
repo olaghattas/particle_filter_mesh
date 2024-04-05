@@ -113,12 +113,10 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 
 
     auto particles_before = particles;
-    // std::cout << " x _before" << particles[0].x << " y_before" << particles[0].y << std::endl;
-//    write_to_file("before_motion_model.txt");
     for (auto &p: particles) {
-        // only 80 percent of the oarticle will be directed in the direction of the vector the rest will be random
+        // only 80 percent of the particle will be directed in the direction of the vector the rest will be random
         // Calculate average displacement vector from available readings
-        if (false) { //(previous_observation.size() > 2) { //&& p.id < num_particles * 0.8) {
+        if (previous_observation.size() > 2) { //&& p.id < num_particles * 0.8) {
             Eigen::Vector2d avg_displacement(0.0, 0.0);
             for (int i = 0; i < previous_observation.size(); i++) {
                 // Extract x and y coordinates from each reading
@@ -153,39 +151,31 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
             p.z += 0;
             p.theta += delta_yaw;
         }
+
+
     }
 
 
-    // std::cout << " x _after" << particles[0].x << " y_after" << particles[0].y << std::endl;
+    // use last 20 particle in areas where cameras can view and there is an observation
+    if (observation == "kitchen") {
+        std::pair<double, double> x_kitchen_bound = std::make_pair(0, 2.0);
+        std::pair<double, double> y_kitchen_bound = std::make_pair(-2, 0.25);
+        ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
+    }
+    if (observation == "dining") {
+        std::pair<double, double> x_dining_bound = std::make_pair(0.6, 2.3);
+        std::pair<double, double> y_dining_bound = std::make_pair(1.5, 3.7);
+        ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
+    }
+    if (observation == "doorway") {
+        std::pair<double, double> x_doorway_bound = std::make_pair(-3, -0.64);
+        std::pair<double, double> y_doorway_bound = std::make_pair(0.5, 1.5);
+        ParticleFilter::particles_in_range(x_doorway_bound, y_doorway_bound, 20);
 
-    // to be passed in through arguments
-
-    // use last 20 particle in areas where cameras can view
-    // for now this will happen at all times later will dedpend on observation availability
-//    if (no_readings) {
-//        std::pair<double, double> x_kitchen_bound = std::make_pair(0, 2.0);
-//        std::pair<double, double> y_kitchen_bound = std::make_pair(-2, 0.25);
-//        std::pair<double, double> x_dining_bound = std::make_pair(0.6, 2.3);
-//        std::pair<double, double> y_dining_bound = std::make_pair(1.5, 3.7);
-//
-//        ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
-//        ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
-//    }
-
-    std::pair<double, double> x_kitchen_bound = std::make_pair(0, 2.0);
-    std::pair<double, double> y_kitchen_bound = std::make_pair(-2, 0.25);
-    std::pair<double, double> x_dining_bound = std::make_pair(0.6, 2.3);
-    std::pair<double, double> y_dining_bound = std::make_pair(1.5, 3.7);
-    std::pair<double, double> x_doorway_bound = std::make_pair(-3, -0.64);
-    std::pair<double, double> y_doorway_bound = std::make_pair(0.5, 1.5);
-
-    ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
-    ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
-    ParticleFilter::particles_in_range(x_doorway_bound, y_doorway_bound, 20);
+    }
     ParticleFilter::enforce_non_collision(particles_before, doors_status, observation);
 
 //    write_to_file("after_motion_model.txt");
-
 }
 
 float ParticleFilter::sample(float mean, float variance) {
