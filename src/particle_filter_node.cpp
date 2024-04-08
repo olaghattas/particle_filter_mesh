@@ -624,7 +624,7 @@ int main(int argc, char **argv) {
 
                         particle_filter.prev_camera_name = particle_filter.curr_camera_name;
 
-
+                    }
                         std::vector<Particle> particles = particle_filter.particles;
                         int num_particles = particles.size();
                         double highest_weight = 0.0;
@@ -637,31 +637,6 @@ int main(int argc, char **argv) {
                                 best_particle = particles[i];
                             }
                         }
-
-//                int highest_density = 0;
-//                int neighborhood_radius = 2;
-//                // Modify the loop to find the best particle based on density
-//                for (int i = 0; i < num_particles; ++i) {
-//                    int particle_density = 0; // Initialize the particle density count
-//
-//                    // Count the number of particles within a local neighborhood around the current particle
-//                    for (int j = 0; j < num_particles; ++j) {
-//                        if (i != j) { // Exclude the current particle itself
-//                            double distance = node->euclideanDistance(particles[i].x, particles[i].y, particles[j].x,
-//                                                                particles[j].y);
-//                            if (distance <=
-//                                neighborhood_radius) { // Check if the particle is within the neighborhood radius
-//                                ++particle_density;
-//                            }
-//                        }
-//                    }
-//
-//                    // Update the best particle based on density
-//                    if (particle_density > highest_density) {
-//                        highest_density = particle_density;
-//                        best_particle = particles[i];
-//                    }
-//                }
 
 //                // Fill in the message
                         geometry_msgs::msg::TransformStamped t;
@@ -676,10 +651,10 @@ int main(int argc, char **argv) {
                         t.transform.rotation.y = 0;
                         t.transform.rotation.z = sin(best_particle.theta / 2.0);
                         t.transform.rotation.w = cos(best_particle.theta / 2.0);
-//                std::cout << " x " << best_particle.x << " y " << best_particle.y << " z " << best_particle.z << std::endl;
-//                t = node -> compute_mean_point(particle_filter.particles);
+                        // std::cout << " x " << best_particle.x << " y " << best_particle.y << " z " << best_particle.z << std::endl;
+                        // t = node -> compute_mean_point(particle_filter.particles);
                         tf_broadcaster_->sendTransform(t);
-                    }
+
                     // because we want to listen to observations in this loop as well so we need to spin the node
                     rclcpp::spin_some(node);
                 }
