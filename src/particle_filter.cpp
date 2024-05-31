@@ -63,7 +63,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
 
     std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
 
-    auto mesh_file = (pkg_dir / "config" / "sajay_coll_new.obj").string();
+    auto mesh_file = (pkg_dir / "config" / "chris_obstacles.obj").string();
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
@@ -72,14 +72,13 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         mesh_vert_map_[name] = verts;
     }
 
-//    TODO : change to mesh with view point
-    auto view_points_mesh_file = (pkg_dir / "config" / "sajay_coll_new.obj").string();
+    auto view_points_mesh_file = (pkg_dir / "config" / "cam_view.obj").string();
 
     auto [view_points_mesh_verts, view_points_mesh_names] = shr_utils::load_meshes(view_points_mesh_file);
-    for (int i = 0; i < mesh_names.size(); i++) {
-        auto name = mesh_names[i];
-        auto verts = mesh_verts[i];
-        view_points_mesh_vert_map_[name] = verts;
+    for (int i = 0; i < view_points_mesh_names.size(); i++) {
+        auto name_mesh = view_points_mesh_names[i];
+        auto verts_mesh = view_points_mesh_verts[i];
+        view_points_mesh_vert_map_[name_mesh] = verts_mesh;
     }
 
 }
@@ -326,7 +325,7 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
 
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
     std::vector<std::string>
-            lndmarks = {"obstacles", "bedroom_door", "bathroom_door", "door", "obstacle_1", "obstacle_3"};
+            lndmarks = {"obstacles", "bedroom_door", "door"};
     std::vector<std::string> view_point = {"cam_door", "cam_dining", "cam_kitchen"};
 //    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " "
 //              << doors_status[2] << std::endl;
