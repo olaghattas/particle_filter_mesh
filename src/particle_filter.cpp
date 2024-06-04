@@ -63,7 +63,9 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
 
     std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
 
-    auto mesh_file = (pkg_dir / "config" / "chris_obstacles.obj").string();
+    //auto mesh_file = (pkg_dir / "config" / "chris_obstacles.obj").string();
+    // TODO: commenty  this when you got ot chris
+    auto mesh_file = (pkg_dir / "config" / "sajay_obstacles.obj").string();
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
@@ -72,7 +74,10 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         mesh_vert_map_[name] = verts;
     }
 
-    auto view_points_mesh_file = (pkg_dir / "config" / "cam_view.obj").string();
+//    auto view_points_mesh_file = (pkg_dir / "config" / "cam_view.obj").string();
+    // TODO: commenty  this when you got ot chris
+    auto view_points_mesh_file = (pkg_dir / "config" / "sajay_cam_view.obj").string();
+
 
     auto [view_points_mesh_verts, view_points_mesh_names] = shr_utils::load_meshes(view_points_mesh_file);
     for (int i = 0; i < view_points_mesh_names.size(); i++) {
@@ -324,9 +329,16 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
 
 
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
+
+    // TODO = CHRIS HOUSE uncommnet this and comment sajays part
+//    std::vector<std::string>
+//            lndmarks = {"obstacles", "bedroom_door", "door"};
+//    std::vector<std::string> view_point = {"cam_door", "cam_dining", "cam_kitchen"};
+
+    // TODO = SAJAY HOUSE
     std::vector<std::string>
-            lndmarks = {"obstacles", "bedroom_door", "door"};
-    std::vector<std::string> view_point = {"cam_door", "cam_dining", "cam_kitchen"};
+            lndmarks = {"obstacles", "bathroom_door"};
+    std::vector<std::string> view_point = {"sajay_cam_view"};
 //    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " "
 //              << doors_status[2] << std::endl;
 
@@ -341,54 +353,23 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
 
         } else if (check_particle_at(lndmarks[1], point)) {
             // bedroom_door
-            if (doors_status[0]) {
+            // the index should correspond to the door in door status found in article_filter_node.cpp
+            if (doors_status[1]) {
                 // door 2 closed keep old particles
                 particles[i] = old_particles[i];
                 particles[i].weight = 0.0;
             }
-        } else if (check_particle_at(lndmarks[2], point)) {
-            // bathroom_door
-            if (doors_status[1]) {
-                // door 1 closed keep old particles
-                particles[i] = old_particles[i];
-                particles[i].weight = 0.0;
-            }
-        } else if (check_particle_at(lndmarks[3], point)) {
-            // outside_door
-            if (doors_status[2]) {
-                // door 1 closed keep old particles
-                particles[i] = old_particles[i];
-                particles[i].weight = 0.0;
-            }
-        } else if (check_particle_at(lndmarks[4], point)) {
-            // obstacle  1 (not door)
-            particles[i] = old_particles[i];
-            particles[i].weight = 0.0;
-
-        } else if (check_particle_at(lndmarks[5], point)) {
-            // obstacle  3 (not door)
-            particles[i] = old_particles[i];
-            particles[i].weight = 0.0;
         }
-
-            // ###### POINTS GOING INTO CAMERA VIEW POINT WHEN NO PERSON IS THERE ########
-            // doesnt allow the particle to go into view points when observation is not from that camera
+// ###### POINTS GOING INTO CAMERA VIEW POINT WHEN NO PERSON IS THERE ########
+// doesnt allow the particle to go into view points when observation is not from that camera
 //         create a mesh of the camera view point
-        else if (observation != "doorway" && check_particle_at_cam_view(view_point[0], point)) {
-            // obstacle  3 (not door)
+
+        /// IF Observation empty then particles cant be in the viewed area
+        else if (observation == "" && check_particle_at_cam_view(view_point[0], point)) {
             particles[i] = old_particles[i];
             particles[i].weight = 0.0;
-        } else if (observation != "dining" && check_particle_at_cam_view(view_point[1], point)) {
-            // obstacle  3 (not door)
-            particles[i] = old_particles[i];
-            particles[i].weight = 0.0;
-        } else if (observation != "kitchen" && check_particle_at_cam_view(view_point[2], point)) {
-            // obstacle  3 (not door)
-            particles[i] = old_particles[i];
-            particles[i].weight = 0.0;
+
         }
     }
-
-
 }
 
