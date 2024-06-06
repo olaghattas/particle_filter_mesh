@@ -75,7 +75,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
     }
 
 //    auto view_points_mesh_file = (pkg_dir / "config" / "cam_view.obj").string();
-    // TODO: commenty  this when you got ot chris
+    // TODO: comment  this when you go to chris
     auto view_points_mesh_file = (pkg_dir / "config" / "sajay_cam_view.obj").string();
 
 
@@ -160,23 +160,23 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     }
 
 
-    // use last 20 particle in areas where cameras can view and there is an observation
-    if (observation == "kitchen") {
-        std::pair<double, double> x_kitchen_bound = std::make_pair(0, 2.0);
-        std::pair<double, double> y_kitchen_bound = std::make_pair(-2, 0.25);
-        ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
-    }
-    if (observation == "dining") {
-        std::pair<double, double> x_dining_bound = std::make_pair(0.6, 2.3);
-        std::pair<double, double> y_dining_bound = std::make_pair(1.5, 3.7);
-        ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
-    }
-    if (observation == "doorway") {
-        std::pair<double, double> x_doorway_bound = std::make_pair(-3, -0.64);
-        std::pair<double, double> y_doorway_bound = std::make_pair(0.5, 1.5);
-        ParticleFilter::particles_in_range(x_doorway_bound, y_doorway_bound, 20);
-
-    }
+//    // use last 20 particle in areas where cameras can view and there is an observation
+//    if (observation == "kitchen") {
+//        std::pair<double, double> x_kitchen_bound = std::make_pair(0, 2.0);
+//        std::pair<double, double> y_kitchen_bound = std::make_pair(-2, 0.25);
+//        ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
+//    }
+//    if (observation == "dining") {
+//        std::pair<double, double> x_dining_bound = std::make_pair(0.6, 2.3);
+//        std::pair<double, double> y_dining_bound = std::make_pair(1.5, 3.7);
+//        ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
+//    }
+//    if (observation == "doorway") {
+//        std::pair<double, double> x_doorway_bound = std::make_pair(-3, -0.64);
+//        std::pair<double, double> y_doorway_bound = std::make_pair(0.5, 1.5);
+//        ParticleFilter::particles_in_range(x_doorway_bound, y_doorway_bound, 20);
+//
+//    }
     ParticleFilter::enforce_non_collision(particles_before, doors_status, observation);
 
 //    write_to_file("after_motion_model.txt");
@@ -338,7 +338,7 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
     // TODO = SAJAY HOUSE
     std::vector<std::string>
             lndmarks = {"obstacles", "bathroom_door"};
-    std::vector<std::string> view_point = {"sajay_cam_view"};
+    std::vector<std::string> view_point = {"inside_not_bedroom"};
 //    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " "
 //              << doors_status[2] << std::endl;
 

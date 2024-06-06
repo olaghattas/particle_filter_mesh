@@ -525,7 +525,7 @@ int main(int argc, char **argv) {
             std::pair<double, double> z_bound = std::make_pair(0, 0);
             std::pair<double, double> theta_bound = std::make_pair(-3.1416, 3.1416);
 
-            int num_particles = 500; // has to be multiple of 128
+            int num_particles = 500;
 
             double velocity = 0.01;
             double yaw_rate = 0.5;
