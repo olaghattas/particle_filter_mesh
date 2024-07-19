@@ -69,7 +69,10 @@ public:
     std::string prev_camera_name = "";
     std::string curr_camera_name = "";
     //Store previous observations
-    std::vector<Eigen::Vector2d> previous_observation;
+    Eigen::Vector2d previous_observation;
+    Eigen::Vector2d current_observation;
+    int previous_count;
+    Eigen::Vector2d avg_displacement;
 
     // Constructor
     ParticleFilter(int num) : num_particles(num), is_initialized(false) {}

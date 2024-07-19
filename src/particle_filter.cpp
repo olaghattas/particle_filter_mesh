@@ -39,9 +39,14 @@ void ParticleFilter::write_to_file(std::string filename) {
 void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, double> y_bound,
                           std::pair<double, double> z_bound,
                           std::pair<double, double> theta_bound) {
+    avg_displacement(0.0, 0.0);
+    previous_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
+    current_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
+    previous_count = 0;
 
     // Add random Gaussian noise to each particle.
-//    std::default_random_engine gen;
+    //    std::default_random_engine gen;
+
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> xNoise(x_bound.first, x_bound.second);
@@ -60,12 +65,9 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
 //    write_to_file("first_run.txt");
     is_initialized = true;
 
-
     std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
 
-    //auto mesh_file = (pkg_dir / "config" / "chris_obstacles.obj").string();
-    // TODO: commenty  this when you got ot chris
-    auto mesh_file = (pkg_dir / "config" / "sajay_obstacles.obj").string();
+    auto mesh_file = (pkg_dir / "config" / "olson_collision_mesh.obj").string();
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
@@ -74,10 +76,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         mesh_vert_map_[name] = verts;
     }
 
-//    auto view_points_mesh_file = (pkg_dir / "config" / "cam_view.obj").string();
-    // TODO: comment  this when you go to chris
-    auto view_points_mesh_file = (pkg_dir / "config" / "sajay_cam_view.obj").string();
-
+    auto view_points_mesh_file = (pkg_dir / "config" / "view_cam_olson.obj").string();
 
     auto [view_points_mesh_verts, view_points_mesh_names] = shr_utils::load_meshes(view_points_mesh_file);
     for (int i = 0; i < view_points_mesh_names.size(); i++) {
@@ -119,28 +118,51 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     auto particles_before = particles;
     for (auto &p: particles) {
         // only 80 percent of the particle will be directed in the direction of the vector the rest will be random
-        // Calculate average displacement vector from available readings
-        if (previous_observation.size() > 2) { //&& p.id < num_particles * 0.8) {
-            Eigen::Vector2d avg_displacement(0.0, 0.0);
-            for (int i = 0; i < previous_observation.size(); i++) {
+        // Calculate average displacement vector from previous readings
+
+        ///
+            // if current and previous have NAN then randomly distribute
+            // if current has value and previous hasNAN then randomly distribute
+            // (1) ==>  can be summarized to previous hasNAN then randomly distribute
+
+            // (2) if current and previous have values then displace in the direction of vector
+            // (3) if current isNaN and previous has value then update according to displacement for 5 iteration then set previous to NAN
+        ///
+        if (!previous_observation.hasNaN()) {  // (1)
+            // && p.id < num_particles * 0.8) {
+                if (!current_observation.hasNaN()) { // (2)
                 // Extract x and y coordinates from each reading
-                double dx = previous_observation[i].x() - p.x;
-                double dy = previous_observation[i].y() - p.y;
-                avg_displacement += Eigen::Vector2d(dx, dy);
+                double dx = current_observation.x() - previous_observation.x();
+                double dy = current_observation.y() - previous_observation.y();
+                avg_displacement = Eigen::Vector2d(dx, dy);
+
+                // Normalize average displacement for velocity calculation
+                // double avg_disp = avg_displacement.norm();
+
+                // Update particle position and orientation using avg_direction and velocity
+                double delta_x = avg_displacement.x() + xNoise(gen);
+                double delta_y = avg_displacement.y() + yNoise(gen);
+                double delta_yaw = yawNoise(gen);
+                p.x += delta_x;
+                p.y += delta_y;
+                p.theta += delta_yaw;
             }
-            avg_displacement /= previous_observation.size();
+            else{ // (3)
+                // Use previous displacement
+                double delta_x = avg_displacement.x() + xNoise(gen);
+                double delta_y = avg_displacement.y() + yNoise(gen);
+                double delta_yaw = yawNoise(gen);
+                p.x += delta_x;
+                p.y += delta_y;
+                p.theta += delta_yaw;
 
-            // Normalize average displacement for velocity calculation
-
-//            double avg_distance = avg_displacement.norm();
-
-            // Update particle position and orientation using avg_direction and velocity
-            double delta_x = avg_displacement.x() + xNoise(gen);
-            double delta_y = avg_displacement.y() + yNoise(gen);
-            double delta_yaw = yawNoise(gen);
-            p.x += delta_x;
-            p.y += delta_y;
-            p.theta += delta_yaw;
+                if (previous_count < 5) {
+                    previous_count++;
+                }else{
+                    previous_count = 0;
+                    previous_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
+                }
+            }
 
         } else {
             // add noise randomly
@@ -155,8 +177,6 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
             p.z += 0;
             p.theta += delta_yaw;
         }
-
-
     }
 
 
@@ -177,7 +197,8 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 //        ParticleFilter::particles_in_range(x_doorway_bound, y_doorway_bound, 20);
 //
 //    }
-    ParticleFilter::enforce_non_collision(particles_before, doors_status, observation);
+    ParticleFilter::enforce_non_collision(particles_before, doors_status, observation
+    );
 
 //    write_to_file("after_motion_model.txt");
 }
@@ -236,7 +257,9 @@ void ParticleFilter::updateWeights(double std_landmark[],
     double sigma_z = std_landmark[2];
     double weights_sum = 0;
 //    write_to_file("before_weight_update.txt");
-
+    if (!current_observation.hasNaN()) {
+        previous_observation = current_observation;
+    }
 
     Observation current_obs = observations[0]; // TODO be changed when more observations are added
     Eigen::Vector4d homogeneousPoint;
@@ -257,16 +280,19 @@ void ParticleFilter::updateWeights(double std_landmark[],
 
     // std::cout << " Observation ::: x " << TransformedPoint[0] << " y " << TransformedPoint[1] << " z "
     //           << TransformedPoint[2] << std::endl;
+//
+//    if (previous_observation.size() < 10)
+//        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
+//    else {
+//        // Remove the oldest observation
+//        previous_observation.erase(previous_observation.begin());
+//
+//        // Add the newest observation
+//        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
+//    }
 
-    if (previous_observation.size() < 10)
-        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
-    else {
-        // Remove the oldest observation
-        previous_observation.erase(previous_observation.begin());
-
-        // Add the newest observation
-        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
-    }
+    /// ONLY ONE OBSERVATION AT A TIME
+    current_observation = Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]);
 
     // loop through each of the particle to update
     for (int i = 0; i < num_particles; ++i) {
@@ -335,10 +361,10 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
 //            lndmarks = {"obstacles", "bedroom_door", "door"};
 //    std::vector<std::string> view_point = {"cam_door", "cam_dining", "cam_kitchen"};
 
-    // TODO = SAJAY HOUSE
+
     std::vector<std::string>
-            lndmarks = {"obstacles", "bathroom_door"};
-    std::vector<std::string> view_point = {"inside_not_bedroom"};
+            lndmarks = {"obstacles", "bedroom", "bathroom", "main_door"};
+    std::vector<std::string> view_point = {"visible_area"};
 //    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " "
 //              << doors_status[2] << std::endl;
 
@@ -354,17 +380,33 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
         } else if (check_particle_at(lndmarks[1], point)) {
             // bedroom_door
             // the index should correspond to the door in door status found in article_filter_node.cpp
+            if (doors_status[0]) {
+                // door 2 closed keep old particles
+                particles[i] = old_particles[i];
+                particles[i].weight = 0.0;
+            }
+        } else if (check_particle_at(lndmarks[2], point)) {
+            // bathroom
+            // the index should correspond to the door in door status found in article_filter_node.cpp
             if (doors_status[1]) {
+                // door 2 closed keep old particles
+                particles[i] = old_particles[i];
+                particles[i].weight = 0.0;
+            }
+        } else if (check_particle_at(lndmarks[3], point)) {
+            // main door
+            // the index should correspond to the door in door status found in article_filter_node.cpp
+            if (doors_status[2]) {
                 // door 2 closed keep old particles
                 particles[i] = old_particles[i];
                 particles[i].weight = 0.0;
             }
         }
 // ###### POINTS GOING INTO CAMERA VIEW POINT WHEN NO PERSON IS THERE ########
-// doesnt allow the particle to go into view points when observation is not from that camera
-//         create a mesh of the camera view point
+// doesnt allow the particle to go into view points when no observation in camera
 
-        /// IF Observation empty then particles cant be in the viewed area
+
+            /// IF Observation empty then particles cant be in the viewed area
         else if (observation == "" && check_particle_at_cam_view(view_point[0], point)) {
             particles[i] = old_particles[i];
             particles[i].weight = 0.0;

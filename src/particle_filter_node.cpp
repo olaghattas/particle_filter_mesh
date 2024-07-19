@@ -55,19 +55,21 @@ private:
 
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_k;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dn;
+    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_lv;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dw;
+    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_cor;
     Observation observation; // Member variable to store the observation
     // to prevent overriding
     Observation observation_kitchen; // Member variable to store the observation from kitchen
-    Observation observation_dining; // Member variable to store the observation from dining
+    Observation observation_living; // Member variable to store the observation from dining
     Observation observation_doorway; // Member variable to store the observation from doorway
+    Observation observation_corridor; // Member variable to store the observation from corridor
 
     rclcpp::TimerBase::SharedPtr timer_{nullptr};
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-    std::map<std::string, std::string> map_cam_aptag;
-    std::map<std::string, std::string> map_cam_aptag_un;
+//    std::map<std::string, std::string> map_cam_aptag;
+//    std::map<std::string, std::string> map_cam_aptag_un;
 
 //    std::vector<bool> door_status_;
     bool door_outdoor;
@@ -78,13 +80,13 @@ private:
 public:
     ParticleFilterNode() : Node("particle_filter") {
 
-        map_cam_aptag["doorway"] = "tag_" + std::string(std::getenv("tag_doorway")) + "_zed";
-        map_cam_aptag["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen")) + "_zed";
-        map_cam_aptag["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room")) + "_zed";
-
-        map_cam_aptag_un["doorway"] = "aptag_" + std::string(std::getenv("tag_doorway"));
-        map_cam_aptag_un["kitchen"] = "aptag_" + std::string(std::getenv("tag_kitchen"));
-        map_cam_aptag_un["dining_room"] = "aptag_" + std::string(std::getenv("tag_dining_room"));
+//        map_cam_aptag["doorway"] = "tag_" + std::string(std::getenv("tag_doorway")) + "_zed";
+//        map_cam_aptag["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen")) + "_zed";
+//        map_cam_aptag["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room")) + "_zed";
+//
+//        map_cam_aptag_un["doorway"] = "aptag_" + std::string(std::getenv("tag_doorway"));
+//        map_cam_aptag_un["kitchen"] = "aptag_" + std::string(std::getenv("tag_kitchen"));
+//        map_cam_aptag_un["dining_room"] = "aptag_" + std::string(std::getenv("tag_dining_room"));
 
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("marker", 10);
 
@@ -96,13 +98,17 @@ public:
                 "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
-        pose_sub_dn = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_dining_room/zed_node_dining_room/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_dining_room(msg); });
+        pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
+                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
 
         pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
                 "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
+
+        pose_sub_cor = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+                "/zed_corridor/zed_node_corridor/body_trk/skeletons", 1,
+                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_corridor(msg); });
 
 
         auto door_outdoor_sub = create_subscription<std_msgs::msg::Bool>(
@@ -163,11 +169,19 @@ public:
             std::cout << "observation in doorway " << observation_doorway.name << std::endl;
 //            return observation = observation_doorway;
         }
-        if (observation_dining.name != "") {
-            if (distance_to_person > observation_dining.x) {
-                distance_to_person = observation_dining.x;
-                observation = observation_dining;
-                std::cout << "observation in doorway " << observation_doorway.name << std::endl;
+        if (observation_living.name != "") {
+            if (distance_to_person > observation_living.x) {
+                distance_to_person = observation_living.x;
+                observation = observation_living;
+                std::cout << "observation in living " << observation_doorway.name << std::endl;
+            }
+
+        }
+        if (observation_corridor.name != "") {
+            if (distance_to_person > observation_corridor.x) {
+                distance_to_person = observation_corridor.x;
+                observation = observation_corridor;
+                std::cout << "observation in corridor " << observation_doorway.name << std::endl;
             }
 
         }
@@ -240,9 +254,10 @@ public:
         }
     }
 
-    void PosePixCallback_dining_room(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+    void PosePixCallback_corridor(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+        //# 2 -> POSE_38
         if (!msg->objects.empty()) {
-            observation_dining.name = "dining_room";
+            observation_corridor.name = "corridor";
             zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
             float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
             for (int i = 0; i < 8; i++) {
@@ -252,9 +267,9 @@ public:
             }
 
             // Calculate the centroid
-            observation_dining.x = sum_x / 8.0;
-            observation_dining.y = sum_y / 8.0;
-            observation_dining.z = sum_z / 8.0;
+            observation_corridor.x = sum_x / 8.0;
+            observation_corridor.y = sum_y / 8.0;
+            observation_corridor.z = sum_z / 8.0;
 
             sigma_pos[0] = msg->objects[0].dimensions_3d[0];
             sigma_pos[1] = msg->objects[0].dimensions_3d[1];
@@ -263,7 +278,35 @@ public:
 
         } else {
             std::cout << "no person detected in doorway" << std::endl;
-            observation_dining.name = "";
+            observation_corridor.name = "";
+
+        }
+    }
+
+    void PosePixCallback_living_room(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+        if (!msg->objects.empty()) {
+            observation_living.name = "living_room";
+            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
+            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
+            for (int i = 0; i < 8; i++) {
+                sum_x += bounding_box.corners[i].kp[0];
+                sum_y += bounding_box.corners[i].kp[1];
+                sum_z += bounding_box.corners[i].kp[2];
+            }
+
+            // Calculate the centroid
+            observation_living.x = sum_x / 8.0;
+            observation_living.y = sum_y / 8.0;
+            observation_living.z = sum_z / 8.0;
+
+            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
+            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
+            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+            sigma_pos[3] = 0.1;
+
+        } else {
+            std::cout << "no person detected in doorway" << std::endl;
+            observation_living.name = "";
 
         }
     }
@@ -330,37 +373,39 @@ public:
     void cam_extrinsics_from_tf() {
 
 //        std::vector<std::string> cams{"dining", "kitchen", "bedroom", "livingroom", "hallway", "doorway"};
-        std::vector<std::string> cams{"kitchen", "doorway", "dining_room"};
+        std::vector<std::string> cams{"kitchen", "doorway", "living_room", "corridor"};
 //        std::vector<std::pair<std::string, int>> cams{"zed_kitchen_left_camera_frame"};
 
         // Loop over the keys of map_cam_aptag using a range-based for loop
         for (const auto &cam: cams) {
-            if (cam == "doorway") {
-                std::cout << " cam_cam " << cam << std::endl;
-                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = transform_tf("unity",
-                                                                                         "zed_doorway_cam");
-                cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
-            } else {
-                // Get transformation matrix from camera to aptag /// from aptag detection
-                std::cout << " cam_cam " << cam << std::endl;
-                std::cout << "  " << map_cam_aptag[cam] << "  " << "zed_" + cam + "_left_camera_frame" << std::endl;
-//
-                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf(map_cam_aptag[cam],
-                                                                                           "zed_" + cam +
-                                                                                           "_left_camera_frame");
-                std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
-//
-                // Get transformation matrix from map to waptag
-                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity",
-                                                                                            map_cam_aptag_un[cam]);
-                std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
-//
-//            // Get transformation matrix from map to aptag
-                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = t_waptag_to_cam * t_cam_to_aptag;
-                std::cout << " t_cam_to_map " << t_cam_to_map << std::endl;
-//
-                cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
-            }
+
+            std::cout << " cam_cam " << cam << std::endl;
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = transform_tf("unity",
+                                                                                     "zed_" + cam + "_cam");
+            cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
+
+            // incase needed later
+//            } else {
+//                // Get transformation matrix from camera to aptag /// from aptag detection
+//                std::cout << " cam_cam " << cam << std::endl;
+//                std::cout << "  " << map_cam_aptag[cam] << "  " << "zed_" + cam + "_left_camera_frame" << std::endl;
+////
+//                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf(map_cam_aptag[cam],
+//                                                                                           "zed_" + cam +
+//                                                                                           "_left_camera_frame");
+//                std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
+////
+//                // Get transformation matrix from map to waptag
+//                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity",
+//                                                                                            map_cam_aptag_un[cam]);
+//                std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
+////
+////            // Get transformation matrix from map to aptag
+//                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = t_waptag_to_cam * t_cam_to_aptag;
+//                std::cout << " t_cam_to_map " << t_cam_to_map << std::endl;
+////
+//                cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
+//            }
         }
     }
 
@@ -519,8 +564,8 @@ int main(int argc, char **argv) {
             //std::pair<double, double> x_bound = std::make_pair(-1.0, 1.0);
             //std::pair<double, double> y_bound = std::make_pair(-1.0, 1.0);
 
-            std::pair<double, double> x_bound = std::make_pair(-3.0, 2.0);
-            std::pair<double, double> y_bound = std::make_pair(-5.0, 1.0);
+            std::pair<double, double> x_bound = std::make_pair(-1.0, 1.0);
+            std::pair<double, double> y_bound = std::make_pair(-1.0, 1.0);
 
             std::pair<double, double> z_bound = std::make_pair(0, 0);
             std::pair<double, double> theta_bound = std::make_pair(-3.1416, 3.1416);
@@ -560,17 +605,15 @@ int main(int argc, char **argv) {
                     Observation obs_ = node->getObservation();
 
                     particle_filter.curr_camera_name = obs_.name;
-                    if (particle_filter.curr_camera_name != particle_filter.prev_camera_name &&
-                        !particle_filter.curr_camera_name.empty()) {
-                        particle_filter.previous_observation = {};
-                    }
+//                    if (particle_filter.curr_camera_name != particle_filter.prev_camera_name &&
+//                        !particle_filter.curr_camera_name.empty()) {
+//                        // have current observation with NAN cause no observation
+//                        particle_filter.current_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
+//                    }
 
-                    // if curr camera is empty for then remove prev observations
+                    // have current observation with NAN cause no observation
                     if (particle_filter.curr_camera_name.empty()) {
-                        if (count_empty > count_threshold) {
-                            particle_filter.previous_observation = {};
-                        }
-                        count_empty++;
+                        particle_filter.current_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
                     }
 
                     /// not being used delta_t
@@ -603,11 +646,11 @@ int main(int argc, char **argv) {
 
                         // which is currently 1
                         for (int j = 0; j < observations.size(); ++j) {
-                            n_x = N_obs_x(gen);
-                            n_y = N_obs_y(gen);
+//                            n_x = N_obs_x(gen);
+//                            n_y = N_obs_y(gen);
                             obs = observations[j];
-                            obs.x = obs.x + n_x;
-                            obs.y = obs.y + n_y;
+//                            obs.x = obs.x + n_x;
+//                            obs.y = obs.y + n_y;
                             noisy_observations.push_back(obs);
                         }
 
@@ -618,9 +661,6 @@ int main(int argc, char **argv) {
 
                         // node->publish_particles(particle_filter.particles);
 
-                        // uncommetn
-                        //particle_filter.resample();
-                        // Calculate and output the average weighted error of the particle filter over all time steps so far.
 
                         particle_filter.prev_camera_name = particle_filter.curr_camera_name;
 
