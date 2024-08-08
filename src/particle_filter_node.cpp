@@ -661,10 +661,12 @@ int main(int argc, char **argv) {
 
                         // node->publish_particles(particle_filter.particles);
 
-
                         particle_filter.prev_camera_name = particle_filter.curr_camera_name;
 
                     }
+
+
+
                         std::vector<Particle> particles = particle_filter.particles;
                         int num_particles = particles.size();
                         double highest_weight = 0.0;

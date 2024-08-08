@@ -92,6 +92,8 @@ public:
 
     void resample();
 
+    void normalize_weights();
+
     /**
 	 * initialized Returns whether particle filter is initialized yet or not.
 	 */

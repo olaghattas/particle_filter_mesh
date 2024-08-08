@@ -101,6 +101,24 @@ void ParticleFilter::particles_in_range(std::pair<double, double> x_bound, std::
     }
 }
 
+void ParticleFilter::normalize_weights() {
+    double sum_weights = 0.0;
+
+    // Compute the sum of all particle weights
+    for (const Particle& particle : particles) {
+        sum_weights += particle.weight;
+    }
+
+    // Normalize the weights so that they sum up to one
+    for (Particle& particle : particles) {
+        if (sum_weights > 0) {
+            particle.weight /= sum_weights;
+        } else {
+            particle.weight = 1.0 / particles.size(); // Assign equal weight if sum is zero
+        }
+    }
+}
+
 void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
                                   std::vector<bool> doors_status, std::string observation) {
     std::default_random_engine gen;
@@ -124,7 +142,6 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
             // if current and previous have NAN then randomly distribute
             // if current has value and previous hasNAN then randomly distribute
             // (1) ==>  can be summarized to previous hasNAN then randomly distribute
-
             // (2) if current and previous have values then displace in the direction of vector
             // (3) if current isNaN and previous has value then update according to displacement for 5 iteration then set previous to NAN
         ///
@@ -235,9 +252,12 @@ void ParticleFilter::resample() {
         resampled_particles[m].x = particles[i].x;
         resampled_particles[m].y = particles[i].y;
 
-        resampled_particles[m].weight = 1.0 / num_particles;
+        //resampled_particles[m].weight = 1.0 / num_particles;
+
     }
+
     particles = resampled_particles;
+    normalize_weights();
 //    write_to_file("after_resampling.txt");
 
 //    for (int m = 0; m < num_particles; m++) {
