@@ -122,6 +122,13 @@ public:
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBathroomCallback(msg); });
     }
 
+    // save coordinate map
+    const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
+            {"living_room", {0.85, -0.31, 0.0}},  // x, y, z coordinates
+            {"bedroom",     {-5.1, -1.2, 0.0}},
+            {"outside",     {6, -0.7, 0.0}},
+    };
+
     std::array<double, 4> sigma_pos;
 
     void DoorOutdoorCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
@@ -613,7 +620,8 @@ int main(int argc, char **argv) {
 
                     // have current observation with NAN cause no observation
                     if (particle_filter.curr_camera_name.empty()) {
-                        particle_filter.current_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
+                        particle_filter.current_observation = Eigen::Vector2d::Constant(
+                                std::numeric_limits<double>::quiet_NaN());
                     }
 
                     /// not being used delta_t
@@ -665,25 +673,25 @@ int main(int argc, char **argv) {
                         particle_filter.prev_camera_name = particle_filter.curr_camera_name;
 
                     }
-                        std::vector<Particle> particles = particle_filter.particles;
-                        int num_particles = particles.size();
-                        double highest_weight = 0.0;
+                    std::vector<Particle> particles = particle_filter.particles;
+                    int num_particles = particles.size();
+                    double highest_weight = 0.0;
 
-                        Particle best_particle;
+                    Particle best_particle;
 
+                    // Fill in the message
+                    geometry_msgs::msg::TransformStamped t;
+                    /// should be whatever the code is expecting the name to be
+                    t.child_frame_id = "nathan";
+
+                    if (!particle_filter.use_max_loc) {
                         for (int i = 0; i < num_particles; ++i) {
                             if (particles[i].weight > highest_weight) {
                                 highest_weight = particles[i].weight;
                                 best_particle = particles[i];
                             }
                         }
-
-//                // Fill in the message
-                        geometry_msgs::msg::TransformStamped t;
-                        t.header.stamp = rclcpp::Clock().now();
                         t.header.frame_id = "unity";
-                        /// should be whatever the code is expecting the name to be
-                        t.child_frame_id = "nathan";
                         t.transform.translation.x = best_particle.x;
                         t.transform.translation.y = best_particle.y;
                         t.transform.translation.z = best_particle.z;
@@ -693,7 +701,29 @@ int main(int argc, char **argv) {
                         t.transform.rotation.w = cos(best_particle.theta / 2.0);
                         // std::cout << " x " << best_particle.x << " y " << best_particle.y << " z " << best_particle.z << std::endl;
                         // t = node -> compute_mean_point(particle_filter.particles);
-                        tf_broadcaster_->sendTransform(t);
+
+                    } else {
+                        auto it = node->coordinate_map.find(particle_filter.max_particles_loc);
+                        std::cout << "max_loc _ " <<  particle_filter.max_particles_loc << std::endl;
+
+                        if (it != node->coordinate_map.end()) {
+                            t.transform.translation.x = std::get<0>(it->second);
+                            t.transform.translation.y = std::get<1>(it->second);
+                            t.transform.translation.z = std::get<2>(it->second);
+                        } else {
+                            // Handle the case where the landmark is not found in the map
+                            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Landmark %s not found in the map!", particle_filter.max_particles_loc.c_str());
+                        }
+
+                        t.transform.rotation.x = 0;
+                        t.transform.rotation.y = 0;
+                        t.transform.rotation.z = 0;
+                        t.transform.rotation.w = 1;
+                        t.header.frame_id = "map";
+
+                    }
+                    t.header.stamp = rclcpp::Clock().now();
+                    tf_broadcaster_->sendTransform(t);
 
                     // because we want to listen to observations in this loop as well so we need to spin the node
                     rclcpp::spin_some(node);

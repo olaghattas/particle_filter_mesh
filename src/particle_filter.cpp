@@ -18,6 +18,63 @@
 
 #define EPSILON 1e-4
 
+void ParticleFilter::normalize_weights() {
+    double sum_weights = 0.0;
+
+    // Compute the sum of all particle weights
+    for (const Particle &particle: particles) {
+        sum_weights += particle.weight;
+    }
+
+    // Normalize the weights so that they sum up to one
+    for (Particle &particle: particles) {
+        if (sum_weights > 0) {
+            particle.weight /= sum_weights;
+        } else {
+            particle.weight = 1.0 / particles.size(); // Assign equal weight if sum is zero
+        }
+    }
+}
+
+// Function to find the landmark with the most particles
+std::string ParticleFilter::find_landmark_with_most_particles() {
+    std::vector<std::string>
+            lndmarks = {"living_room", "bedroom", "outside"};
+
+    std::map<std::string, int> particle_count;
+
+    // Initialize the count for each landmark
+    for (const auto &landmark: lndmarks) {
+        particle_count[landmark] = 0;
+    }
+
+    // Count particles in each landmark
+    for (const auto &particle: particles) {
+        Eigen::Vector3d point = {particle.x, particle.y, -0.5};
+        for (const auto &landmark: lndmarks) {
+            if (check_particle_room(landmark, point)) {
+                particle_count[landmark]++;
+                break;
+            }
+        }
+    }
+    // Find the landmark with the highest number of particles
+    auto max_landmark_it = std::max_element(particle_count.begin(), particle_count.end(),
+                                            [](const std::pair<std::string, int> &a,
+                                               const std::pair<std::string, int> &b) {
+                                                return a.second < b.second;
+                                            });
+
+    if (max_landmark_it != particle_count.end()) {
+        return max_landmark_it->first;
+    } else {
+        // Handle the case where no landmarks are found
+        std::cout << "NO LANDMARK" << std::endl;
+        return "";
+    }
+}
+
+
 void ParticleFilter::write_to_file(std::string filename) {
     std::ofstream outputFile(filename);
     if (outputFile.is_open()) {
@@ -85,6 +142,15 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         view_points_mesh_vert_map_[name_mesh] = verts_mesh;
     }
 
+    auto room_mesh_file = (pkg_dir / "config" / "new_olson_person.obj").string();
+
+    auto [room_mesh_verts, room_mesh_names] = shr_utils::load_meshes(room_mesh_file);
+    for (int i = 0; i < room_mesh_names.size(); i++) {
+        auto name_room = room_mesh_names[i];
+        auto verts_room = room_mesh_verts[i];
+        mesh_vert_map_room[name_room] = verts_room;
+    }
+
 }
 
 void ParticleFilter::particles_in_range(std::pair<double, double> x_bound, std::pair<double, double> y_bound,
@@ -121,16 +187,17 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
         // Calculate average displacement vector from previous readings
 
         ///
-            // if current and previous have NAN then randomly distribute
-            // if current has value and previous hasNAN then randomly distribute
-            // (1) ==>  can be summarized to previous hasNAN then randomly distribute
+        // if current and previous have NAN then randomly distribute
+        // if current has value and previous hasNAN then randomly distribute
+        // (1) ==>  can be summarized to previous hasNAN then randomly distribute
 
-            // (2) if current and previous have values then displace in the direction of vector
-            // (3) if current isNaN and previous has value then update according to displacement for 5 iteration then set previous to NAN
+        // (2) if current and previous have values then displace in the direction of vector
+        // (3) if current isNaN and previous has value then update according to displacement for 5 iteration then set previous to NAN
         ///
         if (!previous_observation.hasNaN()) {  // (1)
             // && p.id < num_particles * 0.8) {
-                if (!current_observation.hasNaN()) { // (2)
+            use_max_loc = false;
+            if (!current_observation.hasNaN()) { // (2)
                 // Extract x and y coordinates from each reading
                 double dx = current_observation.x() - previous_observation.x();
                 double dy = current_observation.y() - previous_observation.y();
@@ -146,8 +213,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
                 p.x += delta_x;
                 p.y += delta_y;
                 p.theta += delta_yaw;
-            }
-            else{ // (3)
+            } else { // (3)
                 // Use previous displacement
                 double delta_x = avg_displacement.x() + xNoise(gen);
                 double delta_y = avg_displacement.y() + yNoise(gen);
@@ -158,7 +224,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 
                 if (previous_count < 5) {
                     previous_count++;
-                }else{
+                } else {
                     previous_count = 0;
                     previous_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
                 }
@@ -176,27 +242,22 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
             p.y += delta_y;
             p.z += 0;
             p.theta += delta_yaw;
+
+
+            /// NO current observation
+
+            if (!use_max_loc){
+                // if it was not already calculated then check which room has the highest number of particles
+                // no need to recalculate cause this value won't change unless an observation is made which will cause
+                // the upper part  of the if to change use_max_loc to false
+                max_particles_loc = find_landmark_with_most_particles();
+                std::cout << "max_loc _ " << max_particles_loc << std::endl;
+                use_max_loc = true;
+            }
         }
     }
 
 
-//    // use last 20 particle in areas where cameras can view and there is an observation
-//    if (observation == "kitchen") {
-//        std::pair<double, double> x_kitchen_bound = std::make_pair(0, 2.0);
-//        std::pair<double, double> y_kitchen_bound = std::make_pair(-2, 0.25);
-//        ParticleFilter::particles_in_range(x_kitchen_bound, y_kitchen_bound, 0);
-//    }
-//    if (observation == "dining") {
-//        std::pair<double, double> x_dining_bound = std::make_pair(0.6, 2.3);
-//        std::pair<double, double> y_dining_bound = std::make_pair(1.5, 3.7);
-//        ParticleFilter::particles_in_range(x_dining_bound, y_dining_bound, 10);
-//    }
-//    if (observation == "doorway") {
-//        std::pair<double, double> x_doorway_bound = std::make_pair(-3, -0.64);
-//        std::pair<double, double> y_doorway_bound = std::make_pair(0.5, 1.5);
-//        ParticleFilter::particles_in_range(x_doorway_bound, y_doorway_bound, 20);
-//
-//    }
     ParticleFilter::enforce_non_collision(particles_before, doors_status, observation
     );
 
@@ -235,16 +296,11 @@ void ParticleFilter::resample() {
         resampled_particles[m].x = particles[i].x;
         resampled_particles[m].y = particles[i].y;
 
-        resampled_particles[m].weight = 1.0 / num_particles;
+//        resampled_particles[m].weight = 1.0 / num_particles;
     }
     particles = resampled_particles;
+    normalize_weights();
 //    write_to_file("after_resampling.txt");
-
-//    for (int m = 0; m < num_particles; m++) {
-//        double max_weight = 0.00;
-//        int count = 0;
-//            resampled_particles[i]
-//        }
 }
 
 void ParticleFilter::updateWeights(double std_landmark[],
@@ -336,6 +392,15 @@ bool ParticleFilter::check_particle_at(const std::string &loc, Eigen::Vector3d p
         return false;
     }
     auto verts = mesh_vert_map_.at(loc);
+    Eigen::MatrixXd verts2d = verts.block(0, 0, 2, verts.cols());
+    return shr_utils::PointInMesh(point, verts, verts2d);
+}
+
+bool ParticleFilter::check_particle_room(const std::string &loc, Eigen::Vector3d point) {
+    if (mesh_vert_map_room.find(loc) == mesh_vert_map_room.end()) {
+        return false;
+    }
+    auto verts = mesh_vert_map_room.at(loc);
     Eigen::MatrixXd verts2d = verts.block(0, 0, 2, verts.cols());
     return shr_utils::PointInMesh(point, verts, verts2d);
 }

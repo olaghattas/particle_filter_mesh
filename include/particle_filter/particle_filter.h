@@ -62,6 +62,7 @@ public:
     bool no_readings = true;
     // map with the mesh vertices
     std::unordered_map<std::string, Eigen::MatrixXd> mesh_vert_map_;
+    std::unordered_map<std::string, Eigen::MatrixXd> mesh_vert_map_room;
     std::unordered_map<std::string, Eigen::MatrixXd> view_points_mesh_vert_map_;
 
     // Set of current particles
@@ -73,6 +74,14 @@ public:
     Eigen::Vector2d current_observation;
     int previous_count;
     Eigen::Vector2d avg_displacement;
+
+    // use location where the most particles are at
+    // this is after the partilces with no observation start spreading and some particles end up
+    // in differnt rooms (stochasticity/noise). due to the weights not updating with no observations it might choose particles
+    // with lesser number of particles
+    // another approach is resampling when no observation based on number of particles
+    bool use_max_loc;
+    std::string max_particles_loc;
 
     // Constructor
     ParticleFilter(int num) : num_particles(num), is_initialized(false) {}
@@ -92,9 +101,12 @@ public:
 
     void resample();
 
-    /**
-	 * initialized Returns whether particle filter is initialized yet or not.
-	 */
+    void normalize_weights();
+    std::string find_landmark_with_most_particles();
+
+        /**
+         * initialized Returns whether particle filter is initialized yet or not.
+         */
     bool initialized() const {
         return is_initialized;
     }
@@ -102,6 +114,7 @@ public:
     void enforce_non_collision(const std::vector <Particle> &old_particles,
                                                std::vector<bool> doors_status, std::string observation);
     bool check_particle_at(const std::string &loc, Eigen::Vector3d point);
+    bool check_particle_room(const std::string &loc, Eigen::Vector3d point);
     bool check_particle_at_cam_view(const std::string &loc, Eigen::Vector3d point);
     void write_to_file(std::string filename);
     float sample(float mean, float variance);
