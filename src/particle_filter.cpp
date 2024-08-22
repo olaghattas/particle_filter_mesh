@@ -124,7 +124,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
 
     std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
 
-    auto mesh_file = (pkg_dir / "config" / "olson_collision_mesh.obj").string();
+    auto mesh_file = (pkg_dir / "config" / "collision.obj").string();
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
@@ -133,7 +133,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         mesh_vert_map_[name] = verts;
     }
 
-    auto view_points_mesh_file = (pkg_dir / "config" / "view_cam_olson.obj").string();
+    auto view_points_mesh_file = (pkg_dir / "config" / "camera_view.obj").string();
 
     auto [view_points_mesh_verts, view_points_mesh_names] = shr_utils::load_meshes(view_points_mesh_file);
     for (int i = 0; i < view_points_mesh_names.size(); i++) {
@@ -142,7 +142,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         view_points_mesh_vert_map_[name_mesh] = verts_mesh;
     }
 
-    auto room_mesh_file = (pkg_dir / "config" / "new_olson_person.obj").string();
+    auto room_mesh_file = (pkg_dir / "config" / "person.obj").string();
 
     auto [room_mesh_verts, room_mesh_names] = shr_utils::load_meshes(room_mesh_file);
     for (int i = 0; i < room_mesh_names.size(); i++) {

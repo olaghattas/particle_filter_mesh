@@ -56,14 +56,12 @@ private:
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_k;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_lv;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dw;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_cor;
+    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_br;
     Observation observation; // Member variable to store the observation
     // to prevent overriding
     Observation observation_kitchen; // Member variable to store the observation from kitchen
     Observation observation_living; // Member variable to store the observation from dining
-    Observation observation_doorway; // Member variable to store the observation from doorway
-    Observation observation_corridor; // Member variable to store the observation from corridor
+    Observation observation_bedroom; // Member variable to store the observation from doorway
 
     rclcpp::TimerBase::SharedPtr timer_{nullptr};
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
@@ -102,14 +100,9 @@ public:
                 "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
 
-        pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
-
-        pose_sub_cor = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_corridor/zed_node_corridor/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_corridor(msg); });
-
+        pose_sub_br = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+                "/zed_bedroom/zed_node_bedroom/body_trk/skeletons", 1,
+                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_bedroom(msg); });
 
         auto door_outdoor_sub = create_subscription<std_msgs::msg::Bool>(
                 "/smartthings_sensors_door_outdoor", 10,
@@ -168,27 +161,19 @@ public:
             observation = observation_kitchen;
         }
 
-        if (observation_doorway.name != "") {
-            if (distance_to_person > observation_doorway.x) {
-                distance_to_person = observation_doorway.x;
-                observation = observation_doorway;
+        if (observation_bedroom.name != "") {
+            if (distance_to_person > observation_bedroom.x) {
+                distance_to_person = observation_bedroom.x;
+                observation = observation_bedroom;
+                std::cout << "observation in bedroom " << observation_bedroom.name << std::endl;
             }
-            std::cout << "observation in doorway " << observation_doorway.name << std::endl;
-//            return observation = observation_doorway;
         }
+
         if (observation_living.name != "") {
             if (distance_to_person > observation_living.x) {
                 distance_to_person = observation_living.x;
                 observation = observation_living;
-                std::cout << "observation in living " << observation_doorway.name << std::endl;
-            }
-
-        }
-        if (observation_corridor.name != "") {
-            if (distance_to_person > observation_corridor.x) {
-                distance_to_person = observation_corridor.x;
-                observation = observation_corridor;
-                std::cout << "observation in corridor " << observation_doorway.name << std::endl;
+                std::cout << "observation in living " << observation_living.name << std::endl;
             }
 
         }
@@ -232,10 +217,10 @@ public:
         }
     }
 
-    void PosePixCallback_doorway(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+    void PosePixCallback_bedroom(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
         //# 2 -> POSE_38
         if (!msg->objects.empty()) {
-            observation_doorway.name = "doorway";
+            observation_bedroom.name = "bedroom";
             zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
             float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
             for (int i = 0; i < 8; i++) {
@@ -245,9 +230,9 @@ public:
             }
 
             // Calculate the centroid
-            observation_doorway.x = sum_x / 8.0;
-            observation_doorway.y = sum_y / 8.0;
-            observation_doorway.z = sum_z / 8.0;
+            observation_bedroom.x = sum_x / 8.0;
+            observation_bedroom.y = sum_y / 8.0;
+            observation_bedroom.z = sum_z / 8.0;
 
             sigma_pos[0] = msg->objects[0].dimensions_3d[0];
             sigma_pos[1] = msg->objects[0].dimensions_3d[1];
@@ -255,37 +240,8 @@ public:
             sigma_pos[3] = 0.1;
 
         } else {
-            std::cout << "no person detected in doorway" << std::endl;
-            observation_doorway.name = "";
-
-        }
-    }
-
-    void PosePixCallback_corridor(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        //# 2 -> POSE_38
-        if (!msg->objects.empty()) {
-            observation_corridor.name = "corridor";
-            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
-            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-            for (int i = 0; i < 8; i++) {
-                sum_x += bounding_box.corners[i].kp[0];
-                sum_y += bounding_box.corners[i].kp[1];
-                sum_z += bounding_box.corners[i].kp[2];
-            }
-
-            // Calculate the centroid
-            observation_corridor.x = sum_x / 8.0;
-            observation_corridor.y = sum_y / 8.0;
-            observation_corridor.z = sum_z / 8.0;
-
-            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
-            sigma_pos[3] = 0.1;
-
-        } else {
-            std::cout << "no person detected in doorway" << std::endl;
-            observation_corridor.name = "";
+            std::cout << "no person detected in bedroom" << std::endl;
+            observation_bedroom.name = "";
 
         }
     }
@@ -312,7 +268,7 @@ public:
             sigma_pos[3] = 0.1;
 
         } else {
-            std::cout << "no person detected in doorway" << std::endl;
+            std::cout << "no person detected in bedroom" << std::endl;
             observation_living.name = "";
 
         }
@@ -380,7 +336,7 @@ public:
     void cam_extrinsics_from_tf() {
 
 //        std::vector<std::string> cams{"dining", "kitchen", "bedroom", "livingroom", "hallway", "doorway"};
-        std::vector<std::string> cams{"kitchen", "doorway", "living_room", "corridor"};
+        std::vector<std::string> cams{"kitchen", "bedroom", "living_room"};
 //        std::vector<std::pair<std::string, int>> cams{"zed_kitchen_left_camera_frame"};
 
         // Loop over the keys of map_cam_aptag using a range-based for loop
@@ -570,6 +526,7 @@ int main(int argc, char **argv) {
             // Define the bounds based on the house
             //std::pair<double, double> x_bound = std::make_pair(-1.0, 1.0);
             //std::pair<double, double> y_bound = std::make_pair(-1.0, 1.0);
+
 
             std::pair<double, double> x_bound = std::make_pair(-1.0, 1.0);
             std::pair<double, double> y_bound = std::make_pair(-1.0, 1.0);
