@@ -124,9 +124,9 @@ public:
 
     // save coordinate map
     const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
-            {"living_room", {0.85, -0.31, 0.0}},  // x, y, z coordinates
-            {"bedroom",     {-5.1, -1.2, 0.0}},
-            {"outside",     {6, -0.7, 0.0}},
+            {"living_room", {-4.2, 1.01, 0.0}},  // x, y, z coordinates
+            {"bedroom",     {-3.4, -2.1, 0.0}},
+            {"outside",     {3.98, -0.03, 0.0}},
     };
 
     std::array<double, 4> sigma_pos;
@@ -719,7 +719,7 @@ int main(int argc, char **argv) {
                         t.transform.rotation.y = 0;
                         t.transform.rotation.z = 0;
                         t.transform.rotation.w = 1;
-                        t.header.frame_id = "map";
+                        t.header.frame_id = "unity";
 
                     }
                     t.header.stamp = rclcpp::Clock().now();
