@@ -487,6 +487,10 @@ int main(int argc, char **argv) {
     auto tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(node);
     auto tf_static_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(node);
 
+    Eigen::Vector3d point;
+    bool outside_mesh;
+    std::vector<std::string> lndmarks;
+
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> camera_extrinsics;
 
     // Todo map observation to camera intrinsic and extrinsics
@@ -681,6 +685,23 @@ int main(int argc, char **argv) {
                     }
                     t.header.stamp = rclcpp::Clock().now();
                     tf_broadcaster_->sendTransform(t);
+
+                    // this is to check if the particles are not in the boundary of the mesh
+                    // if its outside we need to reinitialize
+                    lndmarks = {"living_room", "bedroom", "outside"};
+                    outside_mesh = true;
+                    for (const auto& landmark : lndmarks) {
+                        point = {t.transform.rotation.x, t.transform.rotation.y, -0.5};
+                        if (particle_filter.check_particle_room(landmark, point)) {
+                            outside_mesh = false;
+                            break;
+                        }
+                    }
+
+                    if(outside_mesh){
+                        particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
+                    }
+                    // finish checking if the particles are not in the boundary of the mesh
 
                     // because we want to listen to observations in this loop as well so we need to spin the node
                     rclcpp::spin_some(node);
