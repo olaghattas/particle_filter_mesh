@@ -124,7 +124,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
 
     std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
 
-    auto mesh_file = (pkg_dir / "config" / "collision.obj").string();
+    auto mesh_file = (pkg_dir / "config" / "rick_new_collision.obj").string();
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
