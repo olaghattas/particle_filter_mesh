@@ -634,6 +634,7 @@ int main(int argc, char **argv) {
                         particle_filter.prev_camera_name = particle_filter.curr_camera_name;
 
                     }
+
                     std::vector<Particle> particles = particle_filter.particles;
                     int num_particles = particles.size();
                     double highest_weight = 0.0;
@@ -691,13 +692,15 @@ int main(int argc, char **argv) {
                     lndmarks = {"living_room", "bedroom", "outside"};
                     outside_mesh = true;
                     for (const auto& landmark : lndmarks) {
-                        point = {t.transform.rotation.x, t.transform.rotation.y, -0.5};
+                        std::cout << "for landmark: " <<  landmark << std::endl;
+                        point = {t.transform.translation.x, t.transform.translation.y, -0.5};
                         if (particle_filter.check_particle_room(landmark, point)) {
                             outside_mesh = false;
+                            std::cout << "in landmark and outside_mesh= " <<  outside_mesh << std::endl;
                             break;
                         }
                     }
-
+                    std::cout << "before checking outside_mesh " <<  outside_mesh << std::endl;
                     if(outside_mesh){
                         particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
                     }
