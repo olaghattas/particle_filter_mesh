@@ -17,6 +17,7 @@
 //#include <geometry_msgs/msg/vector3.hpp>
 //#include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/point.hpp>
 //#include <geometry_msgs/msg/pose.hpp>
 #include "std_msgs/msg/bool.hpp"
 
@@ -54,10 +55,10 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_3d_pt;
 
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_k;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_lv;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dw;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_cor;
+    rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr pose_sub_k;
+    rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr pose_sub_lv;
+    rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr pose_sub_dw;
+    rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr pose_sub_cor;
     Observation observation; // Member variable to store the observation
     // to prevent overriding
     Observation observation_kitchen; // Member variable to store the observation from kitchen
@@ -94,21 +95,21 @@ public:
 
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-        pose_sub_k = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
+        pose_sub_k = create_subscription<geometry_msgs::msg::Point>(
+                "/zed_kitchen", 1,
+                [this](const geometry_msgs::msg::Point::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
-        pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
+        pose_sub_lv = create_subscription<geometry_msgs::msg::Point>(
+                "/zed_living_room", 1,
+                [this](const geometry_msgs::msg::Point::SharedPtr msg) { PosePixCallback_living_room(msg); });
 
-        pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
+        pose_sub_dw = create_subscription<geometry_msgs::msg::Point>(
+                "/zed_doorway", 1,
+                [this](const geometry_msgs::msg::Point::SharedPtr msg) { PosePixCallback_doorway(msg); });
 
-        pose_sub_cor = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_corridor/zed_node_corridor/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_corridor(msg); });
+        pose_sub_cor = create_subscription<geometry_msgs::msg::Point>(
+                "/zed_corridor", 1,
+                [this](const geometry_msgs::msg::Point::SharedPtr msg) { PosePixCallback_corridor(msg); });
 
 
         auto door_outdoor_sub = create_subscription<std_msgs::msg::Bool>(
@@ -201,28 +202,19 @@ public:
 
     }
 
-    void PosePixCallback_kitchen(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+    void PosePixCallback_kitchen(const geometry_msgs::msg::Point::SharedPtr &msg) {
         //# 2 -> POSE_38
         std::cout << " ************** Person detected in kitchen" << std::endl;
-
-        if (!msg->objects.empty()) {
+        if(msg){
             observation_kitchen.name = "kitchen";
-            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
-            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-            for (int i = 0; i < 8; i++) {
-                sum_x += bounding_box.corners[i].kp[0];
-                sum_y += bounding_box.corners[i].kp[1];
-                sum_z += bounding_box.corners[i].kp[2];
-            }
-
             // Calculate the centroid
-            observation_kitchen.x = sum_x / 8.0;
-            observation_kitchen.y = sum_y / 8.0;
-            observation_kitchen.z = sum_z / 8.0;
+            observation_kitchen.x = msg->x;
+            observation_kitchen.y = msg->y;
+            observation_kitchen.z = msg->z;
 
-            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+            sigma_pos[0] = 0.1;
+            sigma_pos[1] = 0.1;
+            sigma_pos[2] = 0.1;
             sigma_pos[3] = 0.1;
 
         } else {
@@ -232,26 +224,19 @@ public:
         }
     }
 
-    void PosePixCallback_doorway(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+    void PosePixCallback_doorway(const geometry_msgs::msg::Point::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (!msg->objects.empty()) {
+        if (msg->z == 0.0) {
             observation_doorway.name = "doorway";
-            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
-            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-            for (int i = 0; i < 8; i++) {
-                sum_x += bounding_box.corners[i].kp[0];
-                sum_y += bounding_box.corners[i].kp[1];
-                sum_z += bounding_box.corners[i].kp[2];
-            }
 
             // Calculate the centroid
-            observation_doorway.x = sum_x / 8.0;
-            observation_doorway.y = sum_y / 8.0;
-            observation_doorway.z = sum_z / 8.0;
+            observation_doorway.x = msg->x;
+            observation_doorway.y = msg->y;
+            observation_doorway.z = msg->z;
 
-            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+            sigma_pos[0] = 0.1;
+            sigma_pos[1] = 0.1;
+            sigma_pos[2] = 0.1;
             sigma_pos[3] = 0.1;
 
         } else {
@@ -261,26 +246,19 @@ public:
         }
     }
 
-    void PosePixCallback_corridor(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+    void PosePixCallback_corridor(const geometry_msgs::msg::Point::SharedPtr &msg) {
         //# 2 -> POSE_38
-        if (!msg->objects.empty()) {
+        if (msg->z == 0.0) {
             observation_corridor.name = "corridor";
-            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
-            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-            for (int i = 0; i < 8; i++) {
-                sum_x += bounding_box.corners[i].kp[0];
-                sum_y += bounding_box.corners[i].kp[1];
-                sum_z += bounding_box.corners[i].kp[2];
-            }
 
             // Calculate the centroid
-            observation_corridor.x = sum_x / 8.0;
-            observation_corridor.y = sum_y / 8.0;
-            observation_corridor.z = sum_z / 8.0;
+            observation_corridor.x = msg->x;
+            observation_corridor.y = msg->y;
+            observation_corridor.z = msg->z;
 
-            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+            sigma_pos[0] = 0.1;
+            sigma_pos[1] = 0.1;
+            sigma_pos[2] = 0.1;
             sigma_pos[3] = 0.1;
 
         } else {
@@ -290,27 +268,19 @@ public:
         }
     }
 
-    void PosePixCallback_living_room(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        if (!msg->objects.empty()) {
+    void PosePixCallback_living_room(const geometry_msgs::msg::Point::SharedPtr &msg) {
+        if (msg->z == 0.0) {
             observation_living.name = "living_room";
-            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
-            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-            for (int i = 0; i < 8; i++) {
-                sum_x += bounding_box.corners[i].kp[0];
-                sum_y += bounding_box.corners[i].kp[1];
-                sum_z += bounding_box.corners[i].kp[2];
-            }
 
             // Calculate the centroid
-            observation_living.x = sum_x / 8.0;
-            observation_living.y = sum_y / 8.0;
-            observation_living.z = sum_z / 8.0;
+            observation_living.x = msg->x;
+            observation_living.y = msg->y;
+            observation_living.z = msg->z;
 
-            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+            sigma_pos[0] = 0.1;
+            sigma_pos[1] = 0.1;
+            sigma_pos[2] = 0.1;
             sigma_pos[3] = 0.1;
-
         } else {
             std::cout << "no person detected in doorway" << std::endl;
             observation_living.name = "";
@@ -377,150 +347,10 @@ public:
 
     }
 
-    void cam_extrinsics_from_tf() {
 
-//        std::vector<std::string> cams{"dining", "kitchen", "bedroom", "livingroom", "hallway", "doorway"};
-        std::vector<std::string> cams{"kitchen", "doorway", "living_room", "corridor"};
-//        std::vector<std::pair<std::string, int>> cams{"zed_kitchen_left_camera_frame"};
 
-        // Loop over the keys of map_cam_aptag using a range-based for loop
-        for (const auto &cam: cams) {
 
-            std::cout << " cam_cam " << cam << std::endl;
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = transform_tf("unity",
-                                                                                     "zed_" + cam + "_cam");
-            cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
 
-            // incase needed later
-//            } else {
-//                // Get transformation matrix from camera to aptag /// from aptag detection
-//                std::cout << " cam_cam " << cam << std::endl;
-//                std::cout << "  " << map_cam_aptag[cam] << "  " << "zed_" + cam + "_left_camera_frame" << std::endl;
-////
-//                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf(map_cam_aptag[cam],
-//                                                                                           "zed_" + cam +
-//                                                                                           "_left_camera_frame");
-//                std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
-////
-//                // Get transformation matrix from map to waptag
-//                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity",
-//                                                                                            map_cam_aptag_un[cam]);
-//                std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
-////
-////            // Get transformation matrix from map to aptag
-//                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = t_waptag_to_cam * t_cam_to_aptag;
-//                std::cout << " t_cam_to_map " << t_cam_to_map << std::endl;
-////
-//                cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
-//            }
-        }
-    }
-
-    Eigen::Matrix<double, 4, 4, Eigen::RowMajor> transform_tf(std::string toFrame, std::string fromFrame) {
-        try {
-            // get the geometry transform frames
-            geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform(
-                    toFrame, fromFrame,
-                    tf2::TimePoint(), std::chrono::milliseconds(100000));
-
-            geometry_msgs::msg::Transform transform_ = t.transform;
-
-            // turn geometry transform to 4x4 matrix
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> transform = transform_geometry_to_matrix(transform_);
-            RCLCPP_INFO(this->get_logger(), "transform %s to %s", fromFrame.c_str(), toFrame.c_str());
-
-            return transform;
-
-        }
-        catch (const tf2::TransformException &ex) {
-            RCLCPP_INFO(
-                    this->get_logger(), "Could not transform %s to %s: %s",
-                    fromFrame.c_str(), toFrame.c_str(), ex.what());
-//            return;
-        }
-    }
-
-    std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> get_cam_extrinsic_matrix() {
-        cam_extrinsics_from_tf();
-        return cameraextrinsics;
-    }
-
-    Eigen::Matrix<double, 4, 4, Eigen::RowMajor> transform_geometry_to_matrix(geometry_msgs::msg::Transform transform) {
-        Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicmatrix;
-        Eigen::Quaterniond quaternion(transform.rotation.w,
-                                      transform.rotation.x,
-                                      transform.rotation.y,
-                                      transform.rotation.z);
-        Eigen::Matrix3d rotationMatrix = quaternion.normalized().toRotationMatrix();
-
-        Eigen::Vector3d translationVector(transform.translation.x,
-                                          transform.translation.y,
-                                          transform.translation.z);
-
-        extrinsicmatrix.block<3, 3>(0, 0) = rotationMatrix;
-        extrinsicmatrix.block<3, 1>(0, 3) = translationVector;
-        extrinsicmatrix.row(3) << 0, 0, 0, 1;
-        return extrinsicmatrix;
-    }
-
-    geometry_msgs::msg::TransformStamped
-    publish_transform(Eigen::Matrix<double, 4, 4, Eigen::RowMajor> transformation_matrix, std::string frame_id,
-                      std::string child_frame_id) {
-
-        Eigen::Affine3d affine(transformation_matrix);
-        Eigen::Quaterniond quaternion(affine.linear());
-        Eigen::Vector3d translation(affine.translation());
-
-        // Fill in the message
-        geometry_msgs::msg::TransformStamped t;
-        t.header.stamp = this->get_clock()->now();
-        t.header.frame_id = frame_id;
-        t.child_frame_id = child_frame_id;
-        t.transform.translation.x = translation.x();
-        t.transform.translation.y = translation.y();
-        t.transform.translation.z = translation.z();
-        t.transform.rotation.x = quaternion.x();
-        t.transform.rotation.y = quaternion.y();
-        t.transform.rotation.z = quaternion.z();
-        t.transform.rotation.w = quaternion.w();
-        return t;
-    }
-
-    geometry_msgs::msg::TransformStamped compute_mean_point(std::vector<Particle> particles) {
-        //Compute the mean for all particles that have a reasonably good weight.
-        //    This is not part of the particle filter algorithm but rather an
-        //    addition to show the "best belief" for current position.
-        double m_x = 5.0;
-        double m_y = 10.0;
-        double m_count = 2.0;
-        int num_particles = particles.size();
-        Particle best_particle;
-        for (int i = 0; i < num_particles; ++i) {
-            m_count += particles[i].weight;
-            m_x += particles[i].x * particles[i].weight;
-            m_y += particles[i].y * particles[i].weight;
-        }
-
-        geometry_msgs::msg::TransformStamped t;
-        t.header.stamp = rclcpp::Clock().now();
-        t.header.frame_id = "unity";
-        /// should be whatever the code is expecting the name to be
-        t.child_frame_id = "nathan";
-        t.transform.translation.x = best_particle.x;
-        t.transform.translation.y = best_particle.y;
-        t.transform.translation.z = best_particle.z;
-        t.transform.rotation.x = 0;
-        t.transform.rotation.y = 0;
-        t.transform.rotation.z = sin(best_particle.theta / 2.0);
-        t.transform.rotation.w = cos(best_particle.theta / 2.0);
-//                std::cout << " x " << best_particle.x << " y " << best_particle.y << " z " << best_particle.z << std::endl;
-        return t;
-    }
-
-    // Define a function to calculate the Euclidean distance between two points
-    double euclideanDistance(double x1, double y1, double x2, double y2) {
-        return std::sqrt(std::pow(x2 - x1, 2) + std::pow(y2 - y1, 2));
-    }
 };
 
 int main(int argc, char **argv) {
@@ -724,6 +554,8 @@ int main(int argc, char **argv) {
                     }
                     t.header.stamp = rclcpp::Clock().now();
                     tf_broadcaster_->sendTransform(t);
+
+
 
                     // because we want to listen to observations in this loop as well so we need to spin the node
                     rclcpp::spin_some(node);

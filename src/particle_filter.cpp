@@ -334,18 +334,6 @@ void ParticleFilter::updateWeights(double std_landmark[],
             extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
             extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
 
-    // std::cout << " Observation ::: x " << TransformedPoint[0] << " y " << TransformedPoint[1] << " z "
-    //           << TransformedPoint[2] << std::endl;
-//
-//    if (previous_observation.size() < 10)
-//        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
-//    else {
-//        // Remove the oldest observation
-//        previous_observation.erase(previous_observation.begin());
-//
-//        // Add the newest observation
-//        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
-//    }
 
     /// ONLY ONE OBSERVATION AT A TIME
     current_observation = Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]);
@@ -355,14 +343,6 @@ void ParticleFilter::updateWeights(double std_landmark[],
         Particle *p = &particles[i];
         double weight = 1.0;
 
-        // update weights using Multivariate Gaussian Distribution
-        // equation given in Transformations and Associations Quiz
-//        double gaussian = ((p->x - TransformedPoint[0]) * (p->x - TransformedPoint[0]) /
-//                           (2 * sigma_x * sigma_x)) +
-//                          ((p->y - TransformedPoint[1]) * (p->y - TransformedPoint[1]) /
-//                           (2 * sigma_y * sigma_y)) + ((p->z - TransformedPoint[2]) * (p->z - TransformedPoint[2]) /
-//                                                       (2 * sigma_z * sigma_z));
-//        double gaussian_factor = 1 / (2 * M_PI * sigma_x * sigma_y * sigma_z);
         double gaussian = (((p->x - TransformedPoint[0]) * (p->x - TransformedPoint[0])) /
                            (2 * sigma_x * sigma_x)) +
                           (((p->y - TransformedPoint[1]) * (p->y - TransformedPoint[1])) /
@@ -467,16 +447,16 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
                 particles[i].weight = 0.0;
             }
         }
+
+        // handled iin weight updates since no one in cmaera still acts as an observation
 // ###### POINTS GOING INTO CAMERA VIEW POINT WHEN NO PERSON IS THERE ########
 // doesnt allow the particle to go into view points when no observation in camera
-
-
             /// IF Observation empty then particles cant be in the viewed area
-        else if (observation == "" && check_particle_at_cam_view(view_point[0], point)) {
-            particles[i] = old_particles[i];
-            particles[i].weight = 0.0;
-
-        }
+//        else if (observation == "" && check_particle_at_cam_view(view_point[0], point)) {
+//            particles[i] = old_particles[i];
+//            particles[i].weight = 0.0;
+//
+//        }
     }
 }
 
