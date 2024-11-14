@@ -31,7 +31,7 @@ struct Particle {
 };
 
 struct Observation {
-    std::string name;        // Id of matching landmark. landmark in our case is the joint we are starting with one but later will include all joints
+    std::string name; // Id of matching landmark. landmark in our case is the joint we are starting with one but later will include all joints
     double x;      // x position of landmark (joint) in world
     double y;      // y position of landmark (joint) in world
     double z;      // z position of landmark (joint) in world
@@ -54,6 +54,7 @@ private:
 
     // Flag, if filter is initialized
     bool is_initialized;
+    double min_weight;
 
     // Vector of weights of all particles
     std::vector<double> weights;
@@ -96,8 +97,7 @@ public:
                       std::vector<bool> doors_status, std::string observation);
 
     void updateWeights(double std_landmark[],
-                       std::vector<Observation> observations,
-                       Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams);
+                       std::vector<Observation> observations);
 
     void resample();
 
@@ -112,7 +112,7 @@ public:
     }
 
     void enforce_non_collision(const std::vector <Particle> &old_particles,
-                                               std::vector<bool> doors_status, std::string observation);
+                                               std::vector<bool> doors_status);
     bool check_particle_at(const std::string &loc, Eigen::Vector3d point);
     bool check_particle_room(const std::string &loc, Eigen::Vector3d point);
     bool check_particle_at_cam_view(const std::string &loc, Eigen::Vector3d point);

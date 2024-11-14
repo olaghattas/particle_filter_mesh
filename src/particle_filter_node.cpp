@@ -39,11 +39,10 @@
 #include <yaml-cpp/yaml.h>
 #include "ament_index_cpp/get_package_share_directory.hpp"
 
-#include "zed_interfaces/msg/objects_stamped.hpp"
+
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include "particle_filter_msgs/msg/pose_msg.hpp"
-#include "zed_interfaces/msg/bounding_box3_d.hpp"
-#include "zed_interfaces/msg/object.hpp"
+
 
 #include <cstdlib>
 
@@ -59,6 +58,9 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr pose_sub_lv;
     rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr pose_sub_dw;
     rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr pose_sub_cor;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_outdoor_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bedroom_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bathroom_sub;
     Observation observation; // Member variable to store the observation
     // to prevent overriding
     Observation observation_kitchen; // Member variable to store the observation from kitchen
@@ -112,45 +114,45 @@ public:
                 [this](const geometry_msgs::msg::Point::SharedPtr msg) { PosePixCallback_corridor(msg); });
 
 
-        auto door_outdoor_sub = create_subscription<std_msgs::msg::Bool>(
-                "/smartthings_sensors_door_outdoor", 10,
+        door_outdoor_sub = create_subscription<std_msgs::msg::Bool>(
+                "/smartthings_sensors_door_outdoor", 1,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorOutdoorCallback(msg); });
-        auto door_bedroom_sub = create_subscription<std_msgs::msg::Bool>(
-                "/smartthings_sensors_door_bedroom", 10,
+        door_bedroom_sub = create_subscription<std_msgs::msg::Bool>(
+                "/smartthings_sensors_door_bedroom", 1,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBedroomCallback(msg); });
-        auto door_bathroom_sub = create_subscription<std_msgs::msg::Bool>(
-                "/smartthings_sensors_door_bathroom", 10,
+        door_bathroom_sub = create_subscription<std_msgs::msg::Bool>(
+                "/smartthings_sensors_door_bathroom", 1,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBathroomCallback(msg); });
     }
 
     // save coordinate map
     const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
             {"living_room", {0.85, -0.31, 0.0}},  // x, y, z coordinates
-            {"bedroom",     {-5.1, -1.2, 0.0}},
-            {"outside",     {6, -0.7, 0.0}},
+            {"bedroom",     {-5.1, -1.2,  0.0}},
+            {"outside",     {6,    -0.7,  0.0}},
     };
 
     std::array<double, 4> sigma_pos;
 
     void DoorOutdoorCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         door_outdoor = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "doorstats->open;" << door_outdoor << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "doorstats->open;" << door_outdoor << std::endl;
     }
 
     void DoorBedroomCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
-        std::cout << "********************************" << std::endl;
+//        std::cout << "********************************" << std::endl;
         door_bedroom = msg->data;
-        std::cout << "bedroom msg->open;" << msg->data << std::endl;
-        std::cout << "bedoroom doorstats->open;" << door_bedroom << std::endl;
+//        std::cout << "bedroom msg->open;" << msg->data << std::endl;
+//        std::cout << "bedoroom doorstats->open;" << door_bedroom << std::endl;
     }
 
     void DoorBathroomCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
-        std::cout << "9999999999999999999999999999999999999" << std::endl;
+//        std::cout << "9999999999999999999999999999999999999" << std::endl;
         door_bathroom = msg->data;
-        std::cout << "bsth msg->open;" << msg->data << std::endl;
-        std::cout << "bedbathoroom doorstats->open;" << door_bathroom << std::endl;
+//        std::cout << "bsth msg->open;" << msg->data << std::endl;
+//        std::cout << "bedbathoroom doorstats->open;" << door_bathroom << std::endl;
     }
 
     std::vector<bool> getdoorstatus() {
@@ -165,7 +167,7 @@ public:
 
         if (observation_kitchen.name != "") {
             distance_to_person = observation_kitchen.x;
-            std::cout << "observation in kitchen" << observation_kitchen.name << std::endl;
+//            std::cout << "observation in kitchen" << observation_kitchen.name << std::endl;
             observation = observation_kitchen;
         }
 
@@ -174,7 +176,7 @@ public:
                 distance_to_person = observation_doorway.x;
                 observation = observation_doorway;
             }
-            std::cout << "observation in doorway " << observation_doorway.name << std::endl;
+//            std::cout << "observation in doorway " << observation_doorway.name << std::endl;
 //            return observation = observation_doorway;
         }
         if (observation_living.name != "") {
@@ -197,7 +199,7 @@ public:
         if (distance_to_person == 100.0) {
             observation.name = "";
         }
-        std::cout << "observation in " << observation.name << std::endl;
+//        std::cout << "observation in " << observation.name << std::endl;
         return observation;
 
     }
@@ -205,7 +207,7 @@ public:
     void PosePixCallback_kitchen(const geometry_msgs::msg::Point::SharedPtr &msg) {
         //# 2 -> POSE_38
         std::cout << " ************** Person detected in kitchen" << std::endl;
-        if(msg){
+        if (msg->z == 0.0) {
             observation_kitchen.name = "kitchen";
             // Calculate the centroid
             observation_kitchen.x = msg->x;
@@ -321,7 +323,7 @@ public:
             visualization_msgs::msg::Marker marker;
 
             // Set the marker properties
-            marker.header.frame_id = "unity";
+            marker.header.frame_id = "map";
             marker.header.stamp = this->get_clock()->now();
             marker.id = particle.id;
             marker.type = visualization_msgs::msg::Marker::ARROW;
@@ -348,9 +350,6 @@ public:
     }
 
 
-
-
-
 };
 
 int main(int argc, char **argv) {
@@ -361,211 +360,174 @@ int main(int argc, char **argv) {
     auto tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(node);
     auto tf_static_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(node);
 
-    std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> camera_extrinsics;
 
     // Todo map observation to camera intrinsic and extrinsics
     //    std::map<std::string, cv::Mat> cameraExtrinsics;
     //    cameraExtrinsics.insert(std::make_pair("dining", result_dining));
 
-    bool not_initialized = true;
+
     while (rclcpp::ok()) {
         /// comment when not debugging
-        if (not_initialized) {
-            camera_extrinsics = node->get_cam_extrinsic_matrix();
 
-            if (camera_extrinsics.size() != 0) {
-//                for (const auto &entry: camera_extrinsics) {
-//                    const std::string &camera_name = entry.first;
-//                    const Eigen::Matrix<double, 4, 4, Eigen::RowMajor> &extrinsic_matrix = entry.second;
-//                    auto t_ = node->publish_transform(extrinsic_matrix, "unity", "zed_cam_" + camera_name);
-//                    tf_static_broadcaster_->sendTransform(t_);
-//                }
+        std::array<double, 4> sigma_pos = {0.3, 0.3, 0.3, 0.01};
 
-                not_initialized = false;
+        double sigma_landmark[3] = {0.04, 0.04, 0.04};
+
+        // noise generation
+        std::default_random_engine gen;
+
+        std::normal_distribution<double> N_obs_x(0, sigma_landmark[0]);
+        std::normal_distribution<double> N_obs_y(0, sigma_landmark[1]);
+
+        double n_x, n_y;
+
+        // Define the bounds based on the house
+        //std::pair<double, double> x_bound = std::make_pair(-1.0, 1.0);
+        //std::pair<double, double> y_bound = std::make_pair(-1.0, 1.0);
+
+        std::pair<double, double> x_bound = std::make_pair(-1.0, 1.0);
+        std::pair<double, double> y_bound = std::make_pair(-1.0, 1.0);
+
+        std::pair<double, double> z_bound = std::make_pair(0, 0);
+        std::pair<double, double> theta_bound = std::make_pair(-3.1416, 3.1416);
+
+        int num_particles = 500;
+
+        double velocity = 0.01;
+        double yaw_rate = 0.5;
+        bool running = true;
+
+        ParticleFilter particle_filter(num_particles);
+
+
+
+        // Initialize the particle filter in a uniform distribution
+        particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
+        node->publish_particles(particle_filter.particles);
+
+        while (running) {
+            std::vector<bool> door_status_ = node->getdoorstatus();
+
+            // get observation and skip if no observation is there
+            std::vector<Observation> observations;
+            Observation obs_ = node->getObservation();
+
+            particle_filter.curr_camera_name = obs_.name;
+//            std::cout << "partickle observation" << obs_.name << std::endl;
+            // have current observation with NAN cause no observation
+            if (particle_filter.curr_camera_name.empty()) {
+                particle_filter.current_observation = Eigen::Vector2d::Constant(
+                        std::numeric_limits<double>::quiet_NaN());
             }
-        } else {
-
-            std::array<double, 4> sigma_pos = {0.3, 0.3, 0.3, 0.01};
-
-            double sigma_landmark[3] = {0.04, 0.04, 0.04};
-
-            // noise generation
-            std::default_random_engine gen;
-
-            std::normal_distribution<double> N_obs_x(0, sigma_landmark[0]);
-            std::normal_distribution<double> N_obs_y(0, sigma_landmark[1]);
-
-            double n_x, n_y;
-
-            // Define the bounds based on the house
-            //std::pair<double, double> x_bound = std::make_pair(-1.0, 1.0);
-            //std::pair<double, double> y_bound = std::make_pair(-1.0, 1.0);
-
-            std::pair<double, double> x_bound = std::make_pair(-1.0, 1.0);
-            std::pair<double, double> y_bound = std::make_pair(-1.0, 1.0);
-
-            std::pair<double, double> z_bound = std::make_pair(0, 0);
-            std::pair<double, double> theta_bound = std::make_pair(-3.1416, 3.1416);
-
-            int num_particles = 500;
-
-            double velocity = 0.01;
-            double yaw_rate = 0.5;
-            bool running = true;
-
-            ParticleFilter particle_filter(num_particles);
-
-            for (const auto &entry: camera_extrinsics) {
-                const std::string &camera_name = entry.first;
-                const Eigen::Matrix<double, 4, 4, Eigen::RowMajor> &extrinsic_matrix = entry.second;
-
-                auto t_ = node->publish_transform(extrinsic_matrix, "unity", "zed_cam_" + camera_name);
-                tf_static_broadcaster_->sendTransform(t_);
+            else{
+                particle_filter.current_observation = Eigen::Vector2d(obs_.x,obs_.y);
             }
-            int count_empty = 0;
-            int count_threshold = 5;
-            while (running) {
-//                auto beg = std::chrono::high_resolution_clock::now();
 
-                // bedroom_door, bathroom_door, living_room_door, outside_door
-//                std::vector<bool> door_status_ = {0,0,0,0};
-                std::vector<bool> door_status_ = node->getdoorstatus();
-                if (!particle_filter.initialized()) {
-                    // Initialize the particle filter in a uniform distribution
-                    particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
-                    node->publish_particles(particle_filter.particles);
-
-                } else {
-
-                    // get observation and skip if no observation is there
-                    std::vector<Observation> observations;
-                    Observation obs_ = node->getObservation();
-
-                    particle_filter.curr_camera_name = obs_.name;
-//                    if (particle_filter.curr_camera_name != particle_filter.prev_camera_name &&
-//                        !particle_filter.curr_camera_name.empty()) {
-//                        // have current observation with NAN cause no observation
-//                        particle_filter.current_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
-//                    }
-
-                    // have current observation with NAN cause no observation
-                    if (particle_filter.curr_camera_name.empty()) {
-                        particle_filter.current_observation = Eigen::Vector2d::Constant(
-                                std::numeric_limits<double>::quiet_NaN());
-                    }
-
-                    /// not being used delta_t
+            /// not being used delta_t
 //                    auto end = std::chrono::high_resolution_clock::now();
 //                    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - beg);
 //                    double delta_t = duration.count() / 1000000.0;
-                    double delta_t = 0.1;
+            double delta_t = 0.1;
 
-                    particle_filter.motion_model(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
-                    node->publish_particles(particle_filter.particles);
+            particle_filter.motion_model(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
+            node->publish_particles(particle_filter.particles);
 
 
-                    if (!obs_.name.empty()) {
-                        //particle_filter.previous_observation.push_back(Eigen::Vector2d(obs_.x, obs_.y));
-                        Eigen::Vector4d homogeneousPoint;
-                        homogeneousPoint << obs_.x, obs_.y, obs_.z, 1.0;
+//            if (!obs_.name.empty()) {
+                //particle_filter.previous_observation.push_back(Eigen::Vector2d(obs_.x, obs_.y));
+                Eigen::Vector4d homogeneousPoint;
+                homogeneousPoint << obs_.x, obs_.y, obs_.z, 1.0;
 //                    node->publish_3d_point(homogeneousPoint[0], homogeneousPoint[1], homogeneousPoint[2], "zed_cam", 1,
 //                                           0, 0);
 
-                        std::string cam_name = obs_.name;
-                        std::cout << "  cam_name  " << cam_name << std::endl;
-                        auto extrinsicParams = camera_extrinsics[cam_name];
+                std::string cam_name = obs_.name;
+//                std::cout << "  cam_name  " << cam_name << std::endl;
+//                auto extrinsicParams = camera_extrinsics[cam_name];
 
-                        // observation will always be from the same camera
-                        observations.push_back(obs_);
+                // observation will always be from the same camera
+                observations.push_back(obs_);
 
-                        // simulate the addition of noise to noiseless observation data.
-                        std::vector<Observation> noisy_observations;
-                        Observation obs;
+                // simulate the addition of noise to noiseless observation data.
+                std::vector<Observation> noisy_observations;
+                Observation obs;
 
-                        // which is currently 1
-                        for (int j = 0; j < observations.size(); ++j) {
+                // which is currently 1
+                for (int j = 0; j < observations.size(); ++j) {
 //                            n_x = N_obs_x(gen);
 //                            n_y = N_obs_y(gen);
-                            obs = observations[j];
+                    obs = observations[j];
 //                            obs.x = obs.x + n_x;
 //                            obs.y = obs.y + n_y;
-                            noisy_observations.push_back(obs);
-                        }
-
-                        // Update the weights and resample
-                        particle_filter.updateWeights(sigma_landmark, noisy_observations,
-                                                      extrinsicParams);
-                        particle_filter.resample();
-
-                        // node->publish_particles(particle_filter.particles);
-
-
-                        particle_filter.prev_camera_name = particle_filter.curr_camera_name;
-
-                    }
-                    std::vector<Particle> particles = particle_filter.particles;
-                    int num_particles = particles.size();
-                    double highest_weight = 0.0;
-
-                    Particle best_particle;
-
-                    // Fill in the message
-                    geometry_msgs::msg::TransformStamped t;
-                    /// should be whatever the code is expecting the name to be
-                    t.child_frame_id = "nathan";
-
-                    if (!particle_filter.use_max_loc) {
-                        for (int i = 0; i < num_particles; ++i) {
-                            if (particles[i].weight > highest_weight) {
-                                highest_weight = particles[i].weight;
-                                best_particle = particles[i];
-                            }
-                        }
-                        t.header.frame_id = "unity";
-                        t.transform.translation.x = best_particle.x;
-                        t.transform.translation.y = best_particle.y;
-                        t.transform.translation.z = best_particle.z;
-                        t.transform.rotation.x = 0;
-                        t.transform.rotation.y = 0;
-                        t.transform.rotation.z = sin(best_particle.theta / 2.0);
-                        t.transform.rotation.w = cos(best_particle.theta / 2.0);
-                        // std::cout << " x " << best_particle.x << " y " << best_particle.y << " z " << best_particle.z << std::endl;
-                        // t = node -> compute_mean_point(particle_filter.particles);
-
-                    } else {
-                        auto it = node->coordinate_map.find(particle_filter.max_particles_loc);
-                        std::cout << "max_loc _ " <<  particle_filter.max_particles_loc << std::endl;
-
-                        if (it != node->coordinate_map.end()) {
-                            t.transform.translation.x = std::get<0>(it->second);
-                            t.transform.translation.y = std::get<1>(it->second);
-                            t.transform.translation.z = std::get<2>(it->second);
-                        } else {
-                            // Handle the case where the landmark is not found in the map
-                            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Landmark %s not found in the map!", particle_filter.max_particles_loc.c_str());
-                        }
-
-                        t.transform.rotation.x = 0;
-                        t.transform.rotation.y = 0;
-                        t.transform.rotation.z = 0;
-                        t.transform.rotation.w = 1;
-                        t.header.frame_id = "map";
-
-                    }
-                    t.header.stamp = rclcpp::Clock().now();
-                    tf_broadcaster_->sendTransform(t);
-
-
-
-                    // because we want to listen to observations in this loop as well so we need to spin the node
-                    rclcpp::spin_some(node);
+                    noisy_observations.push_back(obs);
                 }
+
+                // Update the weights and resample
+                particle_filter.updateWeights(sigma_landmark, noisy_observations);
+                if (!obs_.name.empty()) {
+                    particle_filter.resample();
+                }
+                particle_filter.prev_camera_name = particle_filter.curr_camera_name;
+
+//            }
+
+            std::vector<Particle> particles = particle_filter.particles;
+            int num_particles = particles.size();
+            double highest_weight = 0.0;
+
+            Particle best_particle;
+
+            // Fill in the message
+            geometry_msgs::msg::TransformStamped t;
+            /// should be whatever the code is expecting the name to be
+            t.child_frame_id = "nathan";
+
+            if (!particle_filter.use_max_loc) {
+                for (int i = 0; i < num_particles; ++i) {
+                    if (particles[i].weight > highest_weight) {
+                        highest_weight = particles[i].weight;
+                        best_particle = particles[i];
+                    }
+                }
+                t.header.frame_id = "map";
+                t.transform.translation.x = best_particle.x;
+                t.transform.translation.y = best_particle.y;
+                t.transform.translation.z = best_particle.z;
+                t.transform.rotation.x = 0;
+                t.transform.rotation.y = 0;
+                t.transform.rotation.z = sin(best_particle.theta / 2.0);
+                t.transform.rotation.w = cos(best_particle.theta / 2.0);
+                // std::cout << " x " << best_particle.x << " y " << best_particle.y << " z " << best_particle.z << std::endl;
+                // t = node -> compute_mean_point(particle_filter.particles);
+
+            } else {
+                auto it = node->coordinate_map.find(particle_filter.max_particles_loc);
+//                std::cout << "max_loc _ " << particle_filter.max_particles_loc << std::endl;
+
+                if (it != node->coordinate_map.end()) {
+                    t.transform.translation.x = std::get<0>(it->second);
+                    t.transform.translation.y = std::get<1>(it->second);
+                    t.transform.translation.z = std::get<2>(it->second);
+                } else {
+                    // Handle the case where the landmark is not found in the map
+                    RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Landmark %s not found in the map!",
+                                 particle_filter.max_particles_loc.c_str());
+                }
+
+                t.transform.rotation.x = 0;
+                t.transform.rotation.y = 0;
+                t.transform.rotation.z = 0;
+                t.transform.rotation.w = 1;
+                t.header.frame_id = "map";
+
             }
+            t.header.stamp = rclcpp::Clock().now();
+            tf_broadcaster_->sendTransform(t);
+
+            // because we want to listen to observations in this loop as well so we need to spin the node
+            rclcpp::spin_some(node);
         }
-        rclcpp::spin_some(node);
     }
 
     rclcpp::shutdown();
-
     return 0;
 }

@@ -1,3 +1,3 @@
-ros2 run nav2_map_server map_server --ros-args -r map:=/map -p yaml_filename:=/path/to/map.yaml
+ros2 run nav2_map_server map_server --ros-args -r map:=/map -p yaml_filename:=/home/olagh48652/particle_filter_ws/src/particle_filter_mesh/map.yaml
 ros2 lifecycle set /map_server configure
 ros2 lifecycle set /map_server activate
