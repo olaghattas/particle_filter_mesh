@@ -4,6 +4,8 @@ from std_msgs.msg import Bool
 from geometry_msgs.msg import Point, PointStamped
 import tkinter as tk
 import threading
+from visualization_msgs.msg import Marker
+
 
 class DoorSensorPublisher(Node):
     def __init__(self):
@@ -15,8 +17,12 @@ class DoorSensorPublisher(Node):
         self.lv_point_pub = self.create_publisher(Point, '/zed_living_room', 10)
         self.doorway_point_pub = self.create_publisher(Point, '/zed_doorway', 10)
         self.coor_point_pub = self.create_publisher(Point, '/zed_corridor', 10)
+        # self.clicked_point_sub = self.create_subscription(
+        #     PointStamped, '/clicked_point', self.clicked_point_callback, 10
+        # )
+
         self.clicked_point_sub = self.create_subscription(
-            PointStamped, '/clicked_point', self.clicked_point_callback, 10
+            Marker, '/cube_pose', self.clicked_point_callback, 10
         )
         self.active_point_publisher = None
         self.listening = False
@@ -42,7 +48,8 @@ class DoorSensorPublisher(Node):
 
     def clicked_point_callback(self, msg: PointStamped):
         if self.listening and self.active_point_publisher:
-            point_msg = Point(x=msg.point.x, y=msg.point.y, z=0.0)
+            # print("x", msg.pose.position.x, "y",  msg.pose.position.y)
+            point_msg = Point(x= msg.pose.position.x, y=msg.pose.position.y, z=0.0)
             self.active_point_publisher.publish(point_msg)
             self.get_logger().info(
                 f"Published Point x: {point_msg.x}, y: {point_msg.y} to {self.active_point_publisher.topic}"

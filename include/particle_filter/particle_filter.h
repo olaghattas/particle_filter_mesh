@@ -101,6 +101,8 @@ public:
 
     void resample();
 
+    void residual_resample();
+
     void normalize_weights();
     std::string find_landmark_with_most_particles();
 

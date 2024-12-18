@@ -466,6 +466,9 @@ int main(int argc, char **argv) {
                 if (!obs_.name.empty()) {
                     particle_filter.resample();
                 }
+                // else{
+                //     particle_filter.residual_resample();
+                // }
                 particle_filter.prev_camera_name = particle_filter.curr_camera_name;
 
 //            }

@@ -341,6 +341,51 @@ void ParticleFilter::resample() {
 //    write_to_file("after_resampling.txt");
 }
 
+void ParticleFilter::residual_resample() {
+    std::vector<Particle> resampled_particles;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dist(0, num_particles - 1);
+
+    // Step 1: Deterministic sampling
+    std::vector<int> deterministic_counts(num_particles);
+    float total_weight = 0.0f;
+    for (const auto& particle : particles) {
+        total_weight += particle.weight;
+    }
+    int count = 0;
+    for (int i = 0; i < num_particles; i++) {
+        deterministic_counts[i] = std::floor(particles[i].weight / total_weight * num_particles);
+        count += deterministic_counts[i];
+    }
+
+    // Add deterministic samples
+    for (int i = 0; i < num_particles; i++) {
+        for (int j = 0; j < deterministic_counts[i]; j++) {
+            resampled_particles.push_back(particles[i]);
+        }
+    }
+
+    // Step 2: Random sampling for remaining particles
+    int remaining = num_particles - count;
+    if (remaining > 0) {
+        std::vector<Particle> residual_particles;
+        for (int i = 0; i < num_particles; i++) {
+            if (deterministic_counts[i] < 1) {
+                residual_particles.push_back(particles[i]);
+            }
+        }
+
+        for (int i = 0; i < remaining; i++) {
+            resampled_particles.push_back(residual_particles[dist(gen)]);
+        }
+    }
+
+    particles = resampled_particles;
+    normalize_weights();
+}
+
+
 void ParticleFilter::updateWeights(double std_landmark[],
                                    std::vector<Observation> observations) {
     // Update the weights of each particle using a multi-variate Gaussian distribution. You can read
@@ -430,7 +475,7 @@ void ParticleFilter::updateWeights(double std_landmark[],
         for (int i = 0; i < num_particles; ++i) {
             bool in_camview = false;
             Eigen::Vector3d point = {particles[i].x, particles[i].y, 0.0};
-            // person shouldnt be in camera
+            // person shouldn't be in camera
 
             for (const std::string &view: view_point_) {
                 if (check_particle_at_cam_view(view, point)) {
