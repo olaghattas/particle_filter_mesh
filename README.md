@@ -2,9 +2,9 @@
 
 ## Overview
 
-This package is part of the human location estimation module. The nodes uses information from iot sensors along with person position with respect to cameras (It uses ZED camera by stereolabs) in the environment in order to predict where the person is located even when person is not in the cameras view.
+This package is a component of the human location estimation module. The nodes leverage data from IoT sensors and the relative position of the person as detected by cameras (using the ZED camera by Stereolabs) to estimate the person’s location, even when they are outside the camera's field of view.
 
-The Particle_filter_mesh package has been tested under [ROS] Humbleon Ubuntu 22.04
+The Particle_filter_mesh package has been tested under [ROS] Humble on Ubuntu 22.04
 
 ## Installation
 
@@ -15,25 +15,26 @@ The Particle_filter_mesh package has been tested under [ROS] Humbleon Ubuntu 22.
 
 ### Building
 
-To build from source,
+To build from source
 
 ``` 
   mkdir -p ~/ros2_ws/src
-	cd ~/ros2_ws/src
-	git clone https://olaghattas/particle_filter_mesh.git
-	cd ../
-	rosdep install --from-paths . --ignore-src
-	colcon build --symlink-install
+  cd ~/ros2_ws/src
+  git clone https://olaghattas/particle_filter_mesh.git
+  cd ../
+  rosdep install --from-paths . --ignore-src
+  colcon build --symlink-install
   source install/setup.bash
 ``` 
 ## Running in Docker
 
-refer to this repo to run things in docker https://github.com/olaghattas/particle_filter_docker
+Refer to this repo to run things in docker https://github.com/olaghattas/particle_filter_docker
 
 ## Usage
 Run the main node with
-
-	ros2 run  particle_filter_mesh particle_filter_node
+``` 
+  ros2 run  particle_filter_mesh particle_filter_node
+```
 
 ## Config files
 In order to represent the environment, I used .obj files created in Blender.
@@ -70,9 +71,7 @@ The system subscribes to the following topics for each ZED camera and sensor in 
 
 * **`/particles`** visualization_msgs::msg::MarkerArray
   The particles location for visualization purposes.
-
-...
-
+  
 
 ## Bugs & Feature Requests
 
