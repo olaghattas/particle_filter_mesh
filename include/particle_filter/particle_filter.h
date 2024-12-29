@@ -58,14 +58,30 @@ private:
     // Vector of weights of all particles
     std::vector<double> weights;
 
-
-
-
 public:
+    bool no_readings = true;
     // map with the mesh vertices
     std::unordered_map<std::string, Eigen::MatrixXd> mesh_vert_map_;
+    std::unordered_map<std::string, Eigen::MatrixXd> mesh_vert_map_room;
+    std::unordered_map<std::string, Eigen::MatrixXd> view_points_mesh_vert_map_;
+
     // Set of current particles
     std::vector<Particle> particles;
+    std::string prev_camera_name = "";
+    std::string curr_camera_name = "";
+    //Store previous observations
+    Eigen::Vector2d previous_observation;
+    Eigen::Vector2d current_observation;
+    int previous_count;
+    Eigen::Vector2d avg_displacement;
+
+    // use location where the most particles are at
+    // this is after the partilces with no observation start spreading and some particles end up
+    // in differnt rooms (stochasticity/noise). due to the weights not updating with no observations it might choose particles
+    // with lesser number of particles
+    // another approach is resampling when no observation based on number of particles
+    bool use_max_loc;
+    std::string max_particles_loc;
 
     // Constructor
     ParticleFilter(int num) : num_particles(num), is_initialized(false) {}
@@ -77,7 +93,7 @@ public:
               std::pair<double, double> theta);
 
     void motion_model(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
-                      std::vector<bool> doors_status);
+                      std::vector<bool> doors_status, std::string observation);
 
     void updateWeights(double std_landmark[],
                        std::vector<Observation> observations,
@@ -85,18 +101,24 @@ public:
 
     void resample();
 
-    /**
-	 * initialized Returns whether particle filter is initialized yet or not.
-	 */
+    void normalize_weights();
+    std::string find_landmark_with_most_particles();
+
+        /**
+         * initialized Returns whether particle filter is initialized yet or not.
+         */
     bool initialized() const {
         return is_initialized;
     }
 
     void enforce_non_collision(const std::vector <Particle> &old_particles,
-                                               std::vector<bool> doors_status);
+                                               std::vector<bool> doors_status, std::string observation);
     bool check_particle_at(const std::string &loc, Eigen::Vector3d point);
+    bool check_particle_room(const std::string &loc, Eigen::Vector3d point);
+    bool check_particle_at_cam_view(const std::string &loc, Eigen::Vector3d point);
     void write_to_file(std::string filename);
     float sample(float mean, float variance);
+    void particles_in_range(std::pair<double, double> x_bound, std::pair<double, double> y_bound, int ind_start);
 
 };
 
