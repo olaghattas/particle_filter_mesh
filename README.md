@@ -75,7 +75,7 @@ The system subscribes to the following topics for each ZED camera and sensor in 
 
 ## Bugs & Feature Requests
 
-Please report bugs and request features using the [Issue Tracker](https://github.com/ethz-asl/ros_best_practices/issues).
+Please report bugs and request features
 
 
 [ROS]: http://www.ros.org
