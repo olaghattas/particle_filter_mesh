@@ -29,7 +29,6 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
-
 #include <random>
 #include <map>
 #include <opencv2/opencv.hpp>
@@ -38,11 +37,10 @@
 #include <yaml-cpp/yaml.h>
 #include "ament_index_cpp/get_package_share_directory.hpp"
 
-#include "zed_interfaces/msg/objects_stamped.hpp"
-#include <std_msgs/msg/float32_multi_array.hpp>
-#include "particle_filter_msgs/msg/pose_msg.hpp"
 #include "zed_interfaces/msg/bounding_box3_d.hpp"
-#include "zed_interfaces/msg/object.hpp"
+#include "zed_interfaces/msg/objects_stamped.hpp"
+#include <geometry_msgs/msg/transform_stamped.hpp>
+
 
 #include <cstdlib>
 
@@ -445,7 +443,7 @@ public:
         return cameraextrinsics;
     }
 
-    Eigen::Matrix<double, 4, 4, Eigen::RowMajor> transform_geometry_to_matrix(geometry_msgs::msg::Transform transform) {
+    static Eigen::Matrix<double, 4, 4, Eigen::RowMajor> transform_geometry_to_matrix(geometry_msgs::msg::Transform transform) {
         Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicmatrix;
         Eigen::Quaterniond quaternion(transform.rotation.w,
                                       transform.rotation.x,

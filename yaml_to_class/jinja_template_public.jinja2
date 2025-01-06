@@ -1,0 +1,74 @@
+{% for door_sensor in door_sensors %}
+    void Door{{ door_sensor.name }}Callback(const std_msgs::msg::Bool::SharedPtr &msg) {
+        door_outdoor = msg->data;
+        std::cout << " door_{{ door_sensor.name }} msg->open;" << msg->data << std::endl;
+    }
+bool door_{{ door_sensor.name }};
+{% endfor %}
+
+{% for camera in cameras %}
+void PosePixCallback_{{ camera.name }}(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+        //# 2 -> POSE_38
+        if (!msg->objects.empty()) {
+            observation_{{ camera.name }}.name = "{{ camera.name }}";
+            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
+            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
+            for (int i = 0; i < 8; i++) {
+                sum_x += bounding_box.corners[i].kp[0];
+                sum_y += bounding_box.corners[i].kp[1];
+                sum_z += bounding_box.corners[i].kp[2];
+            }
+
+            // Calculate the centroid
+            observation_{{ camera.name }}.x = sum_x / 8.0;
+            observation_{{ camera.name }}.y = sum_y / 8.0;
+            observation_{{ camera.name }}.z = sum_z / 8.0;
+
+            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
+            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
+            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
+            sigma_pos[3] = 0.1;
+
+        } else {
+            std::cout << "no person detected in observation_{{ camera.name }}" << std::endl;
+            observation_{{ camera.name }}.name = "";
+
+        }
+    }
+
+Observation observation_{{ camera.name }};
+rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_{{ camera.name }};
+{% endfor %}
+
+
+std::vector<bool> getdoorstatus() {
+    // should align with particle filter enforce collision landmarks order
+    // bedroom_door, bathroom_door, living_room_door, outside_door
+    return {
+        {% for door_sensor in door_sensors %}
+        door_{{ door_sensor.name }}{% if not loop.last %}, {% endif %}
+        {% endfor %}
+    };
+}
+
+
+    Observation getObservation() {
+        float distance_to_person = 100.0;
+        std::string name = "";
+        {% for camera in cameras %}
+           if (observation_{{ camera.name }}.name != "") {
+               if (distance_to_person > observation_{{ camera.name }}.x) {
+                   distance_to_person = observation_{{ camera.name }}.x;
+                   observation = observation_{{ camera.name }};
+                   std::cout << "observation in {{ camera.name }} " << observation_{{ camera.name }}.name << std::endl;
+               }
+        }
+        {% endfor %}
+
+        if (distance_to_person == 100.0) {
+            observation.name = "";
+        }
+        std::cout << "observation in " << observation.name << std::endl;
+        return observation;
+
+    }

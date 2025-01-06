@@ -1,0 +1,19 @@
+door_sensors:
+  - name: bathroom
+    topic_name: smartthings_sensors_door_bathroom
+  - name: bedroom
+    topic_name: smartthings_sensors_door_bedroom
+  - name: outdoor
+    topic_name: smartthings_sensors_door_outdoor
+cameras:
+  - name: corridor
+    topic_name: zed_corridor/zed_node_corridor/body_trk/skeletons
+  - name: kitchen
+    topic_name: zed_kitchen/zed_node_kitchen/body_trk/skeletons
+  - name: doorway
+    topic_name: zed_doorway/zed_node_doorway/body_trk/skeletons
+  - name: living_room
+    topic_name: zed_living_room/zed_node_living_room/body_trk/skeletons
+
+coordinate_map:
+

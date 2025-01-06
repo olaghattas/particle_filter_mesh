@@ -1,0 +1,12 @@
+door_sensors:
+  - name: bathroom
+  - name: bedroom
+  - name: outdoor
+cameras:
+  - name: corridor
+  - name: kitchen
+  - name: doorway
+  - name: living_room
+
+
+coordinate_map:
