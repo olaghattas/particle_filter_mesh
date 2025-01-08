@@ -363,10 +363,24 @@ void ParticleFilter::updateWeights(double std_landmark[],
 //                           (2 * sigma_y * sigma_y)) + ((p->z - TransformedPoint[2]) * (p->z - TransformedPoint[2]) /
 //                                                       (2 * sigma_z * sigma_z));
 //        double gaussian_factor = 1 / (2 * M_PI * sigma_x * sigma_y * sigma_z);
-        double gaussian = (((p->x - TransformedPoint[0]) * (p->x - TransformedPoint[0])) /
-                           (2 * sigma_x * sigma_x)) +
-                          (((p->y - TransformedPoint[1]) * (p->y - TransformedPoint[1])) /
-                           (2 * sigma_y * sigma_y));
+//        double gaussian = (((p->x - TransformedPoint[0]) * (p->x - TransformedPoint[0])) /
+//                           (2 * sigma_x * sigma_x)) +
+//                          (((p->y - TransformedPoint[1]) * (p->y - TransformedPoint[1])) /
+//                           (2 * sigma_y * sigma_y));
+
+
+        double x_ = p->x - current_obs.x;
+        double y_ = p->y - current_obs.y;
+        double factor = 4;
+
+        // Dynamically compute sigma based on the order of magnitude of x_ and y_
+        sigma_x = std::pow(10, std::floor(std::log10(std::abs(x_))) - 1); // Order of magnitude for x_
+        sigma_y = std::pow(10, std::floor(std::log10(std::abs(y_))) - 1);
+
+        double gaussian = (std::pow(x_, 2) / (2 * factor * std::pow(sigma_x, 2))) +
+                          (std::pow(y_, 2) / (2 * std::pow(sigma_y, 2)));
+
+
 
         double gaussian_factor = 1 / (2 * M_PI * sigma_x * sigma_y);
         gaussian = exp(-gaussian);

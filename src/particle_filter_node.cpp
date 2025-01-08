@@ -123,6 +123,7 @@ public:
     }
 
     // save coordinate map
+    // need to change, these are ricks
     const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
             {"living_room", {0.85, -0.31, 0.0}},  // x, y, z coordinates
             {"bedroom",     {-5.1, -1.2, 0.0}},
@@ -196,7 +197,7 @@ public:
         if (distance_to_person == 100.0) {
             observation.name = "";
         }
-        std::cout << "observation in " << observation.name << std::endl;
+        std::cout << "observation closest in " << observation.name << std::endl;
         return observation;
 
     }
@@ -226,7 +227,7 @@ public:
             sigma_pos[3] = 0.1;
 
         } else {
-            std::cout << "no person detected in kitchen" << std::endl;
+//            std::cout << "no person detected in kitchen" << std::endl;
             observation_kitchen.name = "";
 
         }
@@ -255,7 +256,7 @@ public:
             sigma_pos[3] = 0.1;
 
         } else {
-            std::cout << "no person detected in doorway" << std::endl;
+//            std::cout << "no person detected in doorway" << std::endl;
             observation_doorway.name = "";
 
         }
@@ -284,7 +285,7 @@ public:
             sigma_pos[3] = 0.1;
 
         } else {
-            std::cout << "no person detected in doorway" << std::endl;
+//            std::cout << "no person detected in doorway" << std::endl;
             observation_corridor.name = "";
 
         }
@@ -312,7 +313,7 @@ public:
             sigma_pos[3] = 0.1;
 
         } else {
-            std::cout << "no person detected in doorway" << std::endl;
+//            std::cout << "no person detected in living_room" << std::endl;
             observation_living.name = "";
 
         }
