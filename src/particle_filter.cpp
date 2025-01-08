@@ -96,6 +96,7 @@ void ParticleFilter::write_to_file(std::string filename) {
 void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, double> y_bound,
                           std::pair<double, double> z_bound,
                           std::pair<double, double> theta_bound) {
+    // TODO: find more areas to initialize particles
     avg_displacement(0.0, 0.0);
     previous_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
     current_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
@@ -246,7 +247,7 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 
             /// NO current observation
 
-            if (!use_max_loc){
+            if (!use_max_loc) {
                 // if it was not already calculated then check which room has the highest number of particles
                 // no need to recalculate cause this value won't change unless an observation is made which will cause
                 // the upper part  of the if to change use_max_loc to false
@@ -312,31 +313,29 @@ void ParticleFilter::updateWeights(double std_landmark[],
     double sigma_y = std_landmark[1];
     double sigma_z = std_landmark[2];
     double weights_sum = 0;
-//    write_to_file("before_weight_update.txt");
+
     if (!current_observation.hasNaN()) {
         previous_observation = current_observation;
     }
 
-    Observation current_obs = observations[0]; // TODO be changed when more observations are added
-    Eigen::Vector4d homogeneousPoint;
-    homogeneousPoint << current_obs.x, current_obs.y, current_obs.z, 1.0;
+    // if there is an observation update the particle near the observation
+    if (!current_observation.hasNaN()) {
+        Observation current_obs = observations[0]; // TODO be changed when more observations are added
+        Eigen::Vector4d homogeneousPoint;
+        homogeneousPoint << current_obs.x, current_obs.y, current_obs.z, 1.0;
 
-    Eigen::Vector4d TransformedPoint;
+        Eigen::Vector4d TransformedPoint;
 
-    std::cout << "update2 &&&&&&&&&&&&&&&&&&&&&& " << std::endl;
-    TransformedPoint <<
-                     extrinsicParams(0, 0) * homogeneousPoint[0] + extrinsicParams(0, 1) * homogeneousPoint[1] +
-                     extrinsicParams(0, 2) * homogeneousPoint[2] + extrinsicParams(0, 3) * homogeneousPoint[3],
-            extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-            extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-            extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-            extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-            extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-            extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+        TransformedPoint <<
+                         extrinsicParams(0, 0) * homogeneousPoint[0] + extrinsicParams(0, 1) * homogeneousPoint[1] +
+                         extrinsicParams(0, 2) * homogeneousPoint[2] + extrinsicParams(0, 3) * homogeneousPoint[3],
+                extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+                extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+                extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+                extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+                extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+                extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
 
-    // std::cout << " Observation ::: x " << TransformedPoint[0] << " y " << TransformedPoint[1] << " z "
-    //           << TransformedPoint[2] << std::endl;
-//
 //    if (previous_observation.size() < 10)
 //        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
 //    else {
@@ -347,61 +346,56 @@ void ParticleFilter::updateWeights(double std_landmark[],
 //        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
 //    }
 
-    /// ONLY ONE OBSERVATION AT A TIME
-    current_observation = Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]);
+        /// ONLY ONE OBSERVATION AT A TIME
+        current_observation = Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]);
 
-    // loop through each of the particle to update
-    for (int i = 0; i < num_particles; ++i) {
-        Particle *p = &particles[i];
-        double weight = 1.0;
+        // loop through each of the particle to update
+        for (int i = 0; i < num_particles; ++i) {
+            Particle *p = &particles[i];
+            double weight = 1.0;
 
-        // update weights using Multivariate Gaussian Distribution
-        // equation given in Transformations and Associations Quiz
-//        double gaussian = ((p->x - TransformedPoint[0]) * (p->x - TransformedPoint[0]) /
-//                           (2 * sigma_x * sigma_x)) +
-//                          ((p->y - TransformedPoint[1]) * (p->y - TransformedPoint[1]) /
-//                           (2 * sigma_y * sigma_y)) + ((p->z - TransformedPoint[2]) * (p->z - TransformedPoint[2]) /
-//                                                       (2 * sigma_z * sigma_z));
-//        double gaussian_factor = 1 / (2 * M_PI * sigma_x * sigma_y * sigma_z);
-//        double gaussian = (((p->x - TransformedPoint[0]) * (p->x - TransformedPoint[0])) /
-//                           (2 * sigma_x * sigma_x)) +
-//                          (((p->y - TransformedPoint[1]) * (p->y - TransformedPoint[1])) /
-//                           (2 * sigma_y * sigma_y));
+            double x_ = p->x - current_obs.x;
+            double y_ = p->y - current_obs.y;
+            double factor = 4;
 
+            // Dynamically compute sigma based on the order of magnitude of x_ and y_
+            sigma_x = std::pow(10, std::floor(std::log10(std::abs(x_))) - 1); // Order of magnitude for x_
+            sigma_y = std::pow(10, std::floor(std::log10(std::abs(y_))) - 1);
 
-        double x_ = p->x - current_obs.x;
-        double y_ = p->y - current_obs.y;
-        double factor = 4;
+            double gaussian = (std::pow(x_, 2) / (2 * factor * std::pow(sigma_x, 2))) +
+                              (std::pow(y_, 2) / (2 * std::pow(sigma_y, 2)));
 
-        // Dynamically compute sigma based on the order of magnitude of x_ and y_
-        sigma_x = std::pow(10, std::floor(std::log10(std::abs(x_))) - 1); // Order of magnitude for x_
-        sigma_y = std::pow(10, std::floor(std::log10(std::abs(y_))) - 1);
+            double gaussian_factor = 1 / (2 * M_PI * sigma_x * sigma_y);
+            gaussian = exp(-gaussian);
+            gaussian = gaussian * gaussian_factor;
 
-        double gaussian = (std::pow(x_, 2) / (2 * factor * std::pow(sigma_x, 2))) +
-                          (std::pow(y_, 2) / (2 * std::pow(sigma_y, 2)));
-
-
-
-        double gaussian_factor = 1 / (2 * M_PI * sigma_x * sigma_y);
-        gaussian = exp(-gaussian);
-        gaussian = gaussian * gaussian_factor;
-
-        weight *= gaussian;
-        weights_sum += weight;
-        particles[i].weight = weight;
+            weight *= gaussian;
+            weights_sum += weight;
+            particles[i].weight = weight;
+        }
     }
+        // if no observation
+    else {
+        for (int i = 0; i < num_particles; ++i) {
+            Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
 
+            // Decrease weight of particle in cam view
+            if (check_particle_at_cam_view("visible_area", point)) {
+                // TODO: check diff weights
+                particles[i].weight = particles[i].weight / 10;
+            }
+        }
+    }
     // normalize weights to bring them in (0, 1]
     for (int i = 0; i < num_particles; i++) {
         particles[i].weight /= weights_sum;
     }
-    //write_to_file("after_weight_update.txt");
 
-    // Update observations
 }
 
 
 bool ParticleFilter::check_particle_at(const std::string &loc, Eigen::Vector3d point) {
+    // collision mesh
     if (mesh_vert_map_.find(loc) == mesh_vert_map_.end()) {
         return false;
     }
@@ -419,7 +413,6 @@ bool ParticleFilter::check_particle_room(const std::string &loc, Eigen::Vector3d
     return shr_utils::PointInMesh(point, verts, verts2d);
 }
 
-
 bool ParticleFilter::check_particle_at_cam_view(const std::string &loc, Eigen::Vector3d point) {
     if (view_points_mesh_vert_map_.find(loc) == view_points_mesh_vert_map_.end()) {
         return false;
@@ -432,25 +425,16 @@ bool ParticleFilter::check_particle_at_cam_view(const std::string &loc, Eigen::V
 void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_particles,
                                            std::vector<bool> doors_status, std::string observation) {
 
-
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
-
-    // TODO = CHRIS HOUSE uncommnet this and comment sajays part
-//    std::vector<std::string>
-//            lndmarks = {"obstacles", "bedroom_door", "door"};
-//    std::vector<std::string> view_point = {"cam_door", "cam_dining", "cam_kitchen"};
-
-
     std::vector<std::string>
             lndmarks = {"obstacles", "bedroom", "bathroom", "main_door"};
+
     std::vector<std::string> view_point = {"visible_area"};
-//    std::cout << "{door_bedroom, door_bathroom, door_outdoor}" << doors_status[0] << " " << doors_status[1] << " "
-//              << doors_status[2] << std::endl;
 
     for (int i = 0; i < num_particles; ++i) {
         Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
 
-        // ###### COLLSIONS WITH OBSTACLES ########
+        // ###### COLLISIONS WITH OBSTACLES ########
         if (check_particle_at(lndmarks[0], point)) {
             // obstacle (not door)
             particles[i] = old_particles[i];
@@ -481,14 +465,15 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
                 particles[i].weight = 0.0;
             }
         }
-// ###### POINTS GOING INTO CAMERA VIEW POINT WHEN NO PERSON IS THERE ########
-// doesnt allow the particle to go into view points when no observation in camera
+            // ###### POINTS GOING INTO CAMERA VIEW POINT WHEN NO PERSON IS THERE ########
+            // doesnt allow the particle to go into view points when no observation in camera
 
-
-            /// IF Observation empty then particles cant be in the viewed area
-        else if (observation == "" && check_particle_at_cam_view(view_point[0], point)) {
-            particles[i] = old_particles[i];
-            particles[i].weight = 0.0;
+        else if (observation.empty() && check_particle_at_cam_view(view_point[0], point)) {
+            // update only if particle was not already in cam view
+            if (!check_particle_at_cam_view(view_point[0], {old_particles[i].x, old_particles[i].y, -0.5})) {
+                particles[i] = old_particles[i];
+                particles[i].weight = 0.0;
+            }
 
         }
     }

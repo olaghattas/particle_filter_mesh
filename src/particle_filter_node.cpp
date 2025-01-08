@@ -126,8 +126,8 @@ public:
     // need to change, these are ricks
     const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
             {"living_room", {0.85, -0.31, 0.0}},  // x, y, z coordinates
-            {"bedroom",     {-5.1, -1.2, 0.0}},
-            {"outside",     {6, -0.7, 0.0}},
+            {"bedroom",     {-5.1, -1.2,  0.0}},
+            {"outside",     {6,    -0.7,  0.0}},
     };
 
     std::array<double, 4> sigma_pos;
@@ -543,19 +543,12 @@ int main(int argc, char **argv) {
         /// comment when not debugging
         if (not_initialized) {
             camera_extrinsics = node->get_cam_extrinsic_matrix();
-
+            // make sure camera positions are set
             if (camera_extrinsics.size() != 0) {
-//                for (const auto &entry: camera_extrinsics) {
-//                    const std::string &camera_name = entry.first;
-//                    const Eigen::Matrix<double, 4, 4, Eigen::RowMajor> &extrinsic_matrix = entry.second;
-//                    auto t_ = node->publish_transform(extrinsic_matrix, "unity", "zed_cam_" + camera_name);
-//                    tf_static_broadcaster_->sendTransform(t_);
-//                }
-
                 not_initialized = false;
             }
         } else {
-
+            bool got_first_observation = false;
             std::array<double, 4> sigma_pos = {0.3, 0.3, 0.3, 0.01};
 
             double sigma_landmark[3] = {0.04, 0.04, 0.04};
@@ -582,7 +575,7 @@ int main(int argc, char **argv) {
 
             double velocity = 0.01;
             double yaw_rate = 0.5;
-            bool running = true;
+
 
             ParticleFilter particle_filter(num_particles);
 
@@ -593,22 +586,19 @@ int main(int argc, char **argv) {
                 auto t_ = node->publish_transform(extrinsic_matrix, "unity", "zed_cam_" + camera_name);
                 tf_static_broadcaster_->sendTransform(t_);
             }
-            int count_empty = 0;
-            int count_threshold = 5;
-            while (running) {
-//                auto beg = std::chrono::high_resolution_clock::now();
 
-                // bedroom_door, bathroom_door, living_room_door, outside_door
-//                std::vector<bool> door_status_ = {0,0,0,0};
+
+            while (true) {
+
                 std::vector<bool> door_status_ = node->getdoorstatus();
                 if (!particle_filter.initialized()) {
+
                     // Initialize the particle filter in a uniform distribution
                     particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
                     node->publish_particles(particle_filter.particles);
 
                 } else {
-
-                    // get observation and skip if no observation is there
+                    // get observation
                     std::vector<Observation> observations;
                     Observation obs_ = node->getObservation();
 
@@ -623,12 +613,34 @@ int main(int argc, char **argv) {
                     if (particle_filter.curr_camera_name.empty()) {
                         particle_filter.current_observation = Eigen::Vector2d::Constant(
                                 std::numeric_limits<double>::quiet_NaN());
+                    } else {
+                        if (!got_first_observation) {
+                            got_first_observation = true;
+                        }
                     }
 
+                    while(!got_first_observation){
+                        obs_ = node->getObservation();
+
+                        particle_filter.curr_camera_name = obs_.name;
+//                    if (particle_filter.curr_camera_name != particle_filter.prev_camera_name &&
+//                        !particle_filter.curr_camera_name.empty()) {
+//                        // have current observation with NAN cause no observation
+//                        particle_filter.current_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
+//                    }
+
+                        // have current observation with NAN cause no observation
+                        if (particle_filter.curr_camera_name.empty()) {
+                            particle_filter.current_observation = Eigen::Vector2d::Constant(
+                                    std::numeric_limits<double>::quiet_NaN());
+                        } else {
+                            got_first_observation = true;
+
+                        }
+                        // apply logic for when no observation is there
+
+                    }
                     /// not being used delta_t
-//                    auto end = std::chrono::high_resolution_clock::now();
-//                    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - beg);
-//                    double delta_t = duration.count() / 1000000.0;
                     double delta_t = 0.1;
 
                     particle_filter.motion_model(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
@@ -705,7 +717,7 @@ int main(int argc, char **argv) {
 
                     } else {
                         auto it = node->coordinate_map.find(particle_filter.max_particles_loc);
-                        std::cout << "max_loc _ " <<  particle_filter.max_particles_loc << std::endl;
+                        std::cout << "max_loc _ " << particle_filter.max_particles_loc << std::endl;
 
                         if (it != node->coordinate_map.end()) {
                             t.transform.translation.x = std::get<0>(it->second);
@@ -713,7 +725,8 @@ int main(int argc, char **argv) {
                             t.transform.translation.z = std::get<2>(it->second);
                         } else {
                             // Handle the case where the landmark is not found in the map
-                            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Landmark %s not found in the map!", particle_filter.max_particles_loc.c_str());
+                            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Landmark %s not found in the map!",
+                                         particle_filter.max_particles_loc.c_str());
                         }
 
                         t.transform.rotation.x = 0;
