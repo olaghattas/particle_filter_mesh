@@ -197,7 +197,7 @@ public:
         if (distance_to_person == 100.0) {
             observation.name = "";
         }
-        std::cout << "observation closest in " << observation.name << std::endl;
+//        std::cout << "observation closest in " << observation.name << std::endl;
         return observation;
 
     }
@@ -575,7 +575,8 @@ int main(int argc, char **argv) {
 
             double velocity = 0.01;
             double yaw_rate = 0.5;
-
+            // not being used delta_t
+            double delta_t = 0.1;
 
             ParticleFilter particle_filter(num_particles);
 
@@ -638,10 +639,18 @@ int main(int argc, char **argv) {
 
                         }
                         // apply logic for when no observation is there
+//                        std::cout << "  before motion_model_noisy  " << std::endl;
+                        node->publish_particles(particle_filter.particles);
+//                        particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_);
+//                        std::cout << "  after motion_model_noisy  " << std::endl;
 
+//                        node->publish_particles(particle_filter.particles);
+//                        particle_filter.updateWeightsWithoutObs(sigma_landmark);
+//                        particle_filter.residual_resample();
+
+
+                        // publish nathan
                     }
-                    /// not being used delta_t
-                    double delta_t = 0.1;
 
                     particle_filter.motion_model(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
                     node->publish_particles(particle_filter.particles);
@@ -667,11 +676,11 @@ int main(int argc, char **argv) {
 
                         // which is currently 1
                         for (int j = 0; j < observations.size(); ++j) {
-//                            n_x = N_obs_x(gen);
-//                            n_y = N_obs_y(gen);
+                            // n_x = N_obs_x(gen);
+                            // n_y = N_obs_y(gen);
                             obs = observations[j];
-//                            obs.x = obs.x + n_x;
-//                            obs.y = obs.y + n_y;
+                            // obs.x = obs.x + n_x;
+                            // obs.y = obs.y + n_y;
                             noisy_observations.push_back(obs);
                         }
 
@@ -687,7 +696,8 @@ int main(int argc, char **argv) {
 
                     }
                     std::vector<Particle> particles = particle_filter.particles;
-                    int num_particles = particles.size();
+                    int num_particles_ = particles.size();
+
                     double highest_weight = 0.0;
 
                     Particle best_particle;
@@ -698,7 +708,7 @@ int main(int argc, char **argv) {
                     t.child_frame_id = "nathan";
 
                     if (!particle_filter.use_max_loc) {
-                        for (int i = 0; i < num_particles; ++i) {
+                        for (int i = 0; i < num_particles_; ++i) {
                             if (particles[i].weight > highest_weight) {
                                 highest_weight = particles[i].weight;
                                 best_particle = particles[i];

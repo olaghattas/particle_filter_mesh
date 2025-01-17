@@ -1,0 +1,6 @@
+id: 0  x: 0.476453  y: 0.442072  weight: inf
+id: 1  x: -2.01436  y: -2.06693  weight: 0
+id: 2  x: -0.0672278  y: 0.121132  weight: inf
+id: 3  x: -0.125878  y: -0.182277  weight: inf
+id: 4  x: 1.97658  y: -0.380129  weight: inf
+id: 5  x: 1.66285  y: -1.34283  weight: inf

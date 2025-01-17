@@ -95,11 +95,20 @@ public:
     void motion_model(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
                       std::vector<bool> doors_status, std::string observation);
 
+    void motion_model_noisy(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
+                       std::vector<bool> doors_status);
+
     void updateWeights(double std_landmark[],
                        std::vector<Observation> observations,
                        Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams);
 
+    void updateWeightsWithoutObs(double std_landmark[]);
+
+    void updateWeightsWithObs(double std_landmark[],
+                       std::vector<Observation> observations,
+                       Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams);
     void resample();
+    void residual_resample();
 
     void normalize_weights();
     std::string find_landmark_with_most_particles();

@@ -112,18 +112,58 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
     std::uniform_real_distribution<double> zNoise(z_bound.first, z_bound.second);
     std::uniform_real_distribution<double> yawNoise(theta_bound.first, theta_bound.second);
 
+    std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
     particles.clear();
     weights.clear();
-    for (int i = 0; i < num_particles; ++i) {
-        Particle p = {i, xNoise(gen), yNoise(gen), zNoise(gen), yawNoise(gen), 1.0};
-        particles.push_back(p);
-        weights.push_back(1);
 
+    //    for (int i = 0; i < num_particles; ++i) {
+    //        Particle p = {i, xNoise(gen), yNoise(gen), zNoise(gen), yawNoise(gen), 1.0};
+    //        particles.push_back(p);
+    //        weights.push_back(1);
+    //
+    //    }
+
+    // used write_to_file function ot save the distribution of the particles and used it to initialize
+    // this ensures better converage and easier to be done
+    std::string filename = (pkg_dir / "config" / "initial_dist.txt").string();
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Unable to open file " << filename << std::endl;
+        return;
     }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.empty()) continue;
+//        std::cout << "line:  " << line << std::endl;
+        std::istringstream iss(line);
+//        std::cout << "line:  " << line << std::endl;
+
+        Particle p;
+
+        // Extract data using the file format
+        std::string id_str, x_str, y_str, weight_str;
+        std::string id_str_, x_str_, y_str_, weight_str_;
+        iss >> id_str_ >> id_str >> x_str_ >> x_str >> y_str_ >> y_str >> weight_str_ >> weight_str;
+
+        //        // Parse numerical values from the formatted strings
+        p.id = std::stoi(id_str); // Skip "id:"
+        p.x = std::stof(x_str); // Skip "x:"
+        p.y = std::stof(y_str); // Skip "y:"
+        p.theta =  yawNoise(gen);
+        p.weight = 1.0;
+
+//        // Add the particle and its weight
+        particles.push_back(p);
+        weights.push_back(p.weight);
+    }
+
+    file.close();
+    normalize_weights();
 //    write_to_file("first_run.txt");
     is_initialized = true;
 
-    std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
+
 
     auto mesh_file = (pkg_dir / "config" / "olson_collision_mesh.obj").string();
 
@@ -265,6 +305,41 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 //    write_to_file("after_motion_model.txt");
 }
 
+void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
+                                        std::vector<bool> doors_status) {
+    std::default_random_engine gen;
+
+    std::normal_distribution<double> xNoise(0, 0.25);
+    std::normal_distribution<double> yNoise(0, 0.25);
+    std::normal_distribution<double> zNoise(0, 0.03);
+    std::normal_distribution<double> yawNoise(0, 0.03);
+
+
+    auto particles_before = particles;
+    std::cout << "before p.x " << particles[0].x << std::endl;
+    for (auto &p: particles) {
+
+        // add noise randomly
+        //Add control noise
+        double delta_x = xNoise(gen); //* delta_t;
+        double delta_y = yNoise(gen); // * delta_t;
+//            double delta_z = zNoise(gen); // * delta_t;
+        double delta_yaw = yawNoise(gen); // * delta_t;
+
+        p.x += delta_x;
+        p.y += delta_y;
+        p.z += 0;
+        p.theta += delta_yaw;
+
+
+    }
+    std::cout << "after p.x " << particles[0].x << std::endl;
+
+    ParticleFilter::enforce_non_collision(particles_before, doors_status, "");
+
+    write_to_file("after_motion_model.txt");
+}
+
 float ParticleFilter::sample(float mean, float variance) {
     // randomly sample from a Normal distribution
     static std::random_device rd;
@@ -302,6 +377,176 @@ void ParticleFilter::resample() {
     particles = resampled_particles;
     normalize_weights();
 //    write_to_file("after_resampling.txt");
+}
+
+void ParticleFilter::residual_resample() {
+    int N = particles.size();
+    std::vector<Particle> resampled_particles;
+    resampled_particles.reserve(N);
+
+    // Step 1: Compute the number of deterministic copies
+    std::vector<int> num_copies(N);
+    std::vector<double> weights;
+    weights.reserve(N);
+
+    for (const auto& particle : particles) {
+        weights.push_back(particle.weight);
+    }
+
+    for (int i = 0; i < N; ++i) {
+        num_copies[i] = static_cast<int>(std::floor(N * weights[i]));
+    }
+
+    // Step 2: Add deterministic copies
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < num_copies[i]; ++j) {
+            resampled_particles.push_back(particles[i]);
+        }
+    }
+
+    // Step 3: Handle residual weights
+    double total_residual_weight = 0.0;
+    std::vector<double> residual_weights(N);
+    for (int i = 0; i < N; ++i) {
+        residual_weights[i] = weights[i] * N - num_copies[i];
+        total_residual_weight += residual_weights[i];
+    }
+
+    // Normalize residual weights
+    for (auto& residual_weight : residual_weights) {
+        residual_weight /= total_residual_weight;
+    }
+
+    // Step 4: Perform Multinomial Resampling on residuals
+    std::vector<double> cumulative_sum(N, 0.0);
+    std::partial_sum(residual_weights.begin(), residual_weights.end(), cumulative_sum.begin());
+    cumulative_sum.back() = 1.0; // To avoid rounding errors
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+    while (resampled_particles.size() < N) {
+        double u = dist(gen);
+        auto it = std::lower_bound(cumulative_sum.begin(), cumulative_sum.end(), u);
+        int index = std::distance(cumulative_sum.begin(), it);
+        resampled_particles.push_back(particles[index]);
+    }
+
+    // Step 5: Update particles with resampled particles
+    particles = resampled_particles;
+
+    // Normalize weights (optional, depending on downstream usage)
+    normalize_weights();
+}
+
+
+void ParticleFilter::updateWeightsWithObs(double std_landmark[],
+                                          std::vector<Observation> observations,
+                                          Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams) {
+    // Update the weights of each particle using a multi-variate Gaussian distribution. You can read
+
+    double sigma_x = std_landmark[0];
+    double sigma_y = std_landmark[1];
+    double sigma_z = std_landmark[2];
+    double weights_sum = 0;
+
+    if (!current_observation.hasNaN()) {
+        previous_observation = current_observation;
+    }
+
+    // if there is an observation update the particle near the observation
+
+    Observation current_obs = observations[0]; // TODO be changed when more observations are added
+    Eigen::Vector4d homogeneousPoint;
+    homogeneousPoint << current_obs.x, current_obs.y, current_obs.z, 1.0;
+
+    Eigen::Vector4d TransformedPoint;
+
+    TransformedPoint <<
+                     extrinsicParams(0, 0) * homogeneousPoint[0] + extrinsicParams(0, 1) * homogeneousPoint[1] +
+                     extrinsicParams(0, 2) * homogeneousPoint[2] + extrinsicParams(0, 3) * homogeneousPoint[3],
+            extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+            extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+            extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+            extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+            extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+            extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+
+//    if (previous_observation.size() < 10)
+//        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
+//    else {
+//        // Remove the oldest observation
+//        previous_observation.erase(previous_observation.begin());
+//
+//        // Add the newest observation
+//        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
+//    }
+
+    /// ONLY ONE OBSERVATION AT A TIME
+    current_observation = Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]);
+
+    // loop through each of the particle to update
+    for (int i = 0; i < num_particles; ++i) {
+        Particle *p = &particles[i];
+        double weight = 1.0;
+
+        double x_ = p->x - current_obs.x;
+        double y_ = p->y - current_obs.y;
+        double factor = 4;
+
+        // Dynamically compute sigma based on the order of magnitude of x_ and y_
+        sigma_x = std::pow(10, std::floor(std::log10(std::abs(x_))) - 1); // Order of magnitude for x_
+        sigma_y = std::pow(10, std::floor(std::log10(std::abs(y_))) - 1);
+
+        double gaussian = (std::pow(x_, 2) / (2 * factor * std::pow(sigma_x, 2))) +
+                          (std::pow(y_, 2) / (2 * std::pow(sigma_y, 2)));
+
+        double gaussian_factor = 1 / (2 * M_PI * sigma_x * sigma_y);
+        gaussian = exp(-gaussian);
+        gaussian = gaussian * gaussian_factor;
+
+        weight *= gaussian;
+        weights_sum += weight;
+        particles[i].weight = weight;
+    }
+
+    // if no observation
+
+    // normalize weights to bring them in (0, 1]
+    for (int i = 0; i < num_particles; i++) {
+        particles[i].weight /= weights_sum;
+    }
+
+}
+
+void ParticleFilter::updateWeightsWithoutObs(double std_landmark[]) {
+    // Update the weights of each particle using a multi-variate Gaussian distribution. You can read
+
+    double sigma_x = std_landmark[0];
+    double sigma_y = std_landmark[1];
+    double sigma_z = std_landmark[2];
+    double weights_sum = 0;
+
+
+    // if there is an observation update the particle near the observation
+
+    for (int i = 0; i < num_particles; ++i) {
+        Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
+
+        // Decrease weight of particle in cam view
+        if (check_particle_at_cam_view("visible_area", point)) {
+            // TODO: check diff weights
+            particles[i].weight = particles[i].weight / 10;
+        }
+        weights_sum +=  particles[i].weight;
+    }
+
+    // normalize weights to bring them in (0, 1]
+    for (int i = 0; i < num_particles; i++) {
+        particles[i].weight /= weights_sum;
+    }
+
 }
 
 void ParticleFilter::updateWeights(double std_landmark[],
@@ -384,6 +629,7 @@ void ParticleFilter::updateWeights(double std_landmark[],
                 // TODO: check diff weights
                 particles[i].weight = particles[i].weight / 10;
             }
+            weights_sum +=  particles[i].weight;
         }
     }
     // normalize weights to bring them in (0, 1]
