@@ -316,7 +316,7 @@ void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> st
 
 
     auto particles_before = particles;
-    std::cout << "before p.x " << particles[0].x << std::endl;
+//    std::cout << "before p.x " << particles[0].x << std::endl;
     for (auto &p: particles) {
 
         // add noise randomly
@@ -333,11 +333,25 @@ void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> st
 
 
     }
-    std::cout << "after p.x " << particles[0].x << std::endl;
+//    std::cout << "after p.x " << particles[0].x << std::endl;
 
     ParticleFilter::enforce_non_collision(particles_before, doors_status, "");
 
-    write_to_file("after_motion_model.txt");
+//    write_to_file("after_motion_model.txt");
+}
+
+// Function to calculate Neff
+double ParticleFilter::calculateNeff() {
+    double sum_squared = 0.0;
+    double w;
+    // Sum of squared weights
+    for (int i = 0; i < num_particles; ++i) {
+        w = particles[i].weight;
+        sum_squared += w * w;
+    }
+
+    // Return the effective number of particles
+    return 1.0 / sum_squared;
 }
 
 float ParticleFilter::sample(float mean, float variance) {

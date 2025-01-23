@@ -49,8 +49,7 @@ inline double dist(double x1, double y1, double x2, double y2) {
 
 class ParticleFilter {
 private:
-    // Number of particles to draw
-    int num_particles;
+
 
     // Flag, if filter is initialized
     bool is_initialized;
@@ -59,6 +58,8 @@ private:
     std::vector<double> weights;
 
 public:
+    // Number of particles to draw
+    int num_particles;
     bool no_readings = true;
     // map with the mesh vertices
     std::unordered_map<std::string, Eigen::MatrixXd> mesh_vert_map_;
@@ -109,6 +110,7 @@ public:
                        Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams);
     void resample();
     void residual_resample();
+    double calculateNeff();
 
     void normalize_weights();
     std::string find_landmark_with_most_particles();
