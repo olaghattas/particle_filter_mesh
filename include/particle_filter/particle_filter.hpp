@@ -8,8 +8,6 @@
 #include <math.h>
 #include <vector>
 #include <array>
-//
-
 #include <iostream>
 #include <filesystem>
 #include <Eigen/Dense>
@@ -77,8 +75,8 @@ public:
     Eigen::Vector2d avg_displacement;
 
     // use location where the most particles are at
-    // this is after the partilces with no observation start spreading and some particles end up
-    // in differnt rooms (stochasticity/noise). due to the weights not updating with no observations it might choose particles
+    // this is after the particles with no observation start spreading and some particles end up
+    // in different rooms (stochasticity/noise). due to the weights not updating with no observations it might choose particles
     // with lesser number of particles
     // another approach is resampling when no observation based on number of particles
     bool use_max_loc;
@@ -115,9 +113,9 @@ public:
     void normalize_weights();
     std::string find_landmark_with_most_particles();
 
-        /**
-         * initialized Returns whether particle filter is initialized yet or not.
-         */
+    /**
+     * initialized Returns whether particle filter is initialized yet or not.
+     */
     bool initialized() const {
         return is_initialized;
     }

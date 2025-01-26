@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <map>
 #include <numeric>
-#include "particle_filter/particle_filter.h"
+#include "particle_filter/particle_filter.hpp"
 #include <functional>
 #include <memory>
 #include <string>
@@ -124,7 +124,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
     //    }
 
     // used write_to_file function ot save the distribution of the particles and used it to initialize
-    // this ensures better converage and easier to be done
+    // this ensures better coverage and easier to be done
     std::string filename = (pkg_dir / "config" / "initial_dist.txt").string();
     std::ifstream file(filename);
     if (!file.is_open()) {

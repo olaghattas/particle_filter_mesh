@@ -26,7 +26,7 @@ find_package(tf2_ros REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(shr_utils REQUIRED)
-
+find_package(assimp REQUIRED)
 
 set(dependencies1
         rclcpp
@@ -57,6 +57,12 @@ target_include_directories(particle_filter_node PUBLIC ${YAML_CPP_INCLUDE_DIRS})
 target_link_libraries(particle_filter_node yaml-cpp)
 target_link_libraries(particle_filter_node ${OpenCV_LIBRARIES})
 
+
+add_executable(helper src/helper.cpp)
+ament_target_dependencies(helper ${dependencies1})
+target_include_directories(helper PUBLIC ${EIGEN3_INCLUDE_DIRS})
+target_link_libraries(helper assimp::assimp ${OpenCV_LIBRARIES})
+
 #add_executable(yaml_node src/example_yaml.cpp)
 #target_include_directories(yaml_node PUBLIC ${EIGEN3_INCLUDE_DIRS})
 #target_include_directories(yaml_node PUBLIC ${YAML_CPP_INCLUDE_DIRS})
@@ -84,6 +90,10 @@ target_include_directories(particle_filter PUBLIC
         ${OpenCV_INCLUDE_DIRS}
         )
 
+target_include_directories(helper PUBLIC
+        ${OpenCV_INCLUDE_DIRS}
+)
+
 include_directories(
         include
         ${EIGEN3_INCLUDE_DIRS}
@@ -93,7 +103,11 @@ include_directories(
 install(TARGETS
         particle_filter
         particle_filter_node
+        helper
         DESTINATION lib/${PROJECT_NAME}
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION lib/${PROJECT_NAME}
         )
 
 ament_package()
