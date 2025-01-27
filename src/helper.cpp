@@ -6,7 +6,7 @@
 #include <functional>
 #include <memory>
 #include <string>
-
+#include <random>
 #include "visualization_msgs/msg/marker.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -27,7 +27,6 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 
 
-#include <random>
 #include <map>
 #include <opencv2/opencv.hpp>
 #include <array>
@@ -44,14 +43,25 @@
 class MeshNode : public rclcpp::Node {
 private:
     rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr clicked_point;
+
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr flag;
+
     rclcpp::TimerBase::SharedPtr timer_{nullptr};
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     geometry_msgs::msg::TransformStamped t;
-    std::unordered_map<std::string, std::vector<float> > mesh_vert_map_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_;
+
 
 public:
+
+    std::unordered_map<std::string, std::vector<float>> mesh_vert_map_;
+    bool flag_obs = false;
     MeshNode() : Node("particle_filter") {
+        flag = create_subscription<std_msgs::msg::Bool>(
+                "/flag", 1,
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { FlagCallback(msg); });
+
         clicked_point = create_subscription<geometry_msgs::msg::PointStamped>(
                 "/clicked_point", 1,
                 [this](const geometry_msgs::msg::PointStamped::SharedPtr msg) { ClickedPointCallback(msg); });
@@ -59,6 +69,7 @@ public:
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
+        publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("marker", 10);
 
         std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
         auto mesh_file = (pkg_dir / "config" / "transition_2.obj").string();
@@ -74,6 +85,51 @@ public:
         }
     }
 
+    void FlagCallback(const std_msgs::msg::Bool::SharedPtr msg){
+
+        if (msg->data) {
+            // Do something if the message contains 'true'
+            flag_obs = true;
+        } else {
+            // Do something if the message contains 'false'
+            flag_obs = false;
+        }
+    }
+
+    void publish_particles(std::vector<std::pair<float, float>> &particles) {       // Create a marker array message
+        auto markerArrayMsg = std::make_shared<visualization_msgs::msg::MarkerArray>();
+        // Populate the marker array with markers
+        int count = 0;
+        for (const auto &particle: particles) {
+            // Create a marker message
+            visualization_msgs::msg::Marker marker;
+
+            // Set the marker properties
+            marker.header.frame_id = "unity";
+            marker.header.stamp = this->get_clock()->now();
+            marker.id = count++;
+            marker.type = visualization_msgs::msg::Marker::ARROW;
+            marker.action = visualization_msgs::msg::Marker::ADD;
+            marker.pose.position.x = particle.first;
+            marker.pose.position.y = particle.second;
+            marker.pose.position.z = 0.0;
+            marker.pose.orientation.z = 0;
+            marker.pose.orientation.w = 1;
+            marker.scale.x = 0.05;  // Set the scale to make the arrow thinner
+            marker.scale.y = 0.01;  // Set the scale to make the arrow thinner
+            marker.scale.z = 0.01;  // Set the scale to make the arrow thinner
+            marker.color.r = 1.0;
+            marker.color.g = 0.0;
+            marker.color.b = 0.0;
+            marker.color.a = 1.0;
+
+            // Add the marker to the marker array
+            markerArrayMsg->markers.push_back(marker);
+        }
+        // Publish the marker array
+        publisher_->publish(*markerArrayMsg);
+
+    }
     void ClickedPointCallback(geometry_msgs::msg::PointStamped::SharedPtr msg) {
         std::cout << "msg.x " << msg->point.x << std::endl;
         std::cout << "msg.y " << msg->point.y << std::endl;
@@ -166,8 +222,10 @@ int main(int argc, char **argv) {
     auto node = std::make_shared<MeshNode>();
     auto tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(node);
     geometry_msgs::msg::TransformStamped t;
-
+    std::string current_state = "";
+    std::string prev_state = "";
     auto tf_static_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(node);
+    std::vector<std::pair<float, float>> particles;
 
     geometry_msgs::msg::TransformStamped t_;
     t_.header.stamp = rclcpp::Clock().now();
@@ -187,6 +245,30 @@ int main(int argc, char **argv) {
             lndmarks = {"indoor"};
 //            lndmarks = {"indoor", "outdoor"};
 
+//    std::vector<float> bounds_outside = node->mesh_vert_map_["outdoor"];
+//    for (auto i:bounds_outside){
+//        std::cout << "i" << i<< std::endl;
+//    }
+
+
+//    std::random_device rd;  // Seed
+//    std::mt19937 gen(rd()); // Random number generator
+//    std::uniform_real_distribution<float> dist_x(bounds_outside[0], bounds_outside[1]);
+//    std::uniform_real_distribution<float> dist_y(bounds_outside[2], bounds_outside[3]);
+//    std::cout << "GEN: " << std::endl;
+
+//    for (int i = 0; i < 200; ++i) {
+////                    std::cout << "current_state: " << current_state << " prev_state: " << prev_state << std::endl;
+//        std::pair<int, int> p;
+//        // Generate random values within the bounds
+//        p.first = static_cast<int>(dist_x(gen));
+//        p.second = static_cast<int>(dist_y(gen));
+//        particles.push_back(p);
+//
+//    }
+//    std::cout << "PUBLISH: " << std::endl;
+//    node->publish_particles(particles);
+
     while (rclcpp::ok()) {
 
         t = node->getter_transform();
@@ -200,9 +282,41 @@ int main(int argc, char **argv) {
 //                std::cout << "lndmrk: " << lndmrk << std::endl;
                 if (node->check_person_at_loc(lndmrk)){
                     std::cout << "PERSON  AT " << lndmrk << std::endl;
+
+                    current_state = lndmrk;
+                    std::cout << "current_state: " << current_state << std::endl;
+                }else{
+                    current_state = "";
                 }
             }
+            std::cout << "current_state: " << current_state << " prev_state: " << prev_state << std::endl;
+            if (current_state!="" && prev_state!="" && current_state == prev_state){
+                std::cout << "bounds_outside: " << std::endl;
+                std::vector<float> bounds_outside = node->mesh_vert_map_["outdoor"];
+
+                std::random_device rd;  // Seed
+                std::mt19937 gen(rd()); // Random number generator
+                std::uniform_real_distribution<float> dist_x(bounds_outside[0], bounds_outside[1]);
+                std::uniform_real_distribution<float> dist_y(bounds_outside[2], bounds_outside[3]);
+                std::cout << "GEN: " << std::endl;
+
+                for (int i = 0; i < 200; ++i) {
+//                    std::cout << "current_state: " << current_state << " prev_state: " << prev_state << std::endl;
+                    std::pair<float, float> p;
+                    // Generate random values within the bounds
+                    p.first = static_cast<float>(dist_x(gen));
+                    p.second = static_cast<float>(dist_y(gen));
+                    std::cout << "p.first : " << p.first << "p.second : " << p.second << std::endl;
+                    particles.push_back(p);
+
+                }
+                std::cout << "PUBLISH: " << std::endl;
+                node->publish_particles(particles);
+
+            }
         }
+
+        prev_state = current_state;
         rclcpp::spin_some(node);
     }
 
