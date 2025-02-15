@@ -551,7 +551,8 @@ void ParticleFilter::updateWeightsWithoutObs(double std_landmark[]) {
         // Decrease weight of particle in cam view
         if (check_particle_at_cam_view("visible_area", point)) {
             // TODO: check diff weights
-            particles[i].weight = particles[i].weight / 10;
+            particles[i].weight = 0;
+            //  particles[i].weight = particles[i].weight / 10;
         }
         weights_sum +=  particles[i].weight;
     }
