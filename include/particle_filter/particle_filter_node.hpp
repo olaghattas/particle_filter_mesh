@@ -11,15 +11,8 @@
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "rclcpp/rclcpp.hpp"
 
-//#include <sensor_msgs/msg/camera_info.hpp>
-//#include <sensor_msgs/msg/image.hpp>
-//#include <geometry_msgs/msg/point.hpp>
-//#include <geometry_msgs/msg/vector3.hpp>
-//#include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
-//#include <geometry_msgs/msg/pose.hpp>
 #include "std_msgs/msg/bool.hpp"
-
 
 #include <Eigen/Dense>
 #include <cv_bridge/cv_bridge.h>

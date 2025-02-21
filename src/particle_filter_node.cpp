@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
             first_obs = node->first_obs;
 
             // for debug
-            first_obs = true;
+//            first_obs = true;
             // NO FIRST OBSERVATION KEEP DISTRIBUTION AS IS
             if (first_obs) {
 
@@ -116,12 +116,15 @@ int main(int argc, char **argv) {
                 t.child_frame_id = "nathan";
 
                 particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_);
+                node->publish_particles(particle_filter.particles);
 
                 if (obs_.name.empty()) {
                     //observation empty
 
                     // Update the weights and resample
                     particle_filter.updateWeightsWithoutObs(sigma_landmark);
+                    node->publish_particles(particle_filter.particles);
+
                     std::cout << " updateWeightsWithoutObs  " << std::endl;
 
                     double Neff = particle_filter.calculateNeff();
@@ -133,6 +136,8 @@ int main(int argc, char **argv) {
                         std::cout << " resample  " << std::endl;
 
                         particle_filter.resample();
+                        node->publish_particles(particle_filter.particles);
+
                     }
 
 //                  publish location  in the location with the most particles
@@ -168,18 +173,20 @@ int main(int argc, char **argv) {
 
                     // Update the weights and resample
                     particle_filter.updateWeightsWithObs(sigma_landmark, observations, extrinsicParams );
-                    std::cout << " updateWeightsWithoutObs  " << std::endl;
+                    std::cout << " updateWeightsWithObs  " << std::endl;
 
-                    double Neff = particle_filter.calculateNeff();
-                    // resample if too few effective particles
-                    std::cout << " Neff:  " << Neff << std::endl;
-                    std::cout << " N/3:  " << (particle_filter.num_particles) / 3 << std::endl;
+//                    double Neff = particle_filter.calculateNeff();
+//                    // resample if too few effective particles
+//                    std::cout << " Neff:  " << Neff << std::endl;
+//                    std::cout << " N/3:  " << (particle_filter.num_particles) / 3 << std::endl;
 
-                    if (Neff < (particle_filter.num_particles) / 3) {
-                        std::cout << " resample  " << std::endl;
+//                    if (Neff < (particle_filter.num_particles) / 3) {
+                    std::cout << " resample  " << std::endl;
 
-                        particle_filter.resample();
-                    }
+                    particle_filter.resample();
+                    node->publish_particles(particle_filter.particles);
+
+//                    }
 
                     // publish particle with highest weight
                     double highest_weight = 0.0;
