@@ -88,6 +88,7 @@ int main(int argc, char **argv) {
 
     particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
     node->publish_particles(particle_filter.particles);
+//    std::vector<Particle> particles = particle_filter.particles;
 
     while (rclcpp::ok()) {
         if (not_initialized) {
@@ -132,10 +133,11 @@ int main(int argc, char **argv) {
                     std::cout << " Neff:  " << Neff << std::endl;
                     std::cout << " N/3:  " << (particle_filter.num_particles) / 3 << std::endl;
 
-                    if (Neff < (particle_filter.num_particles) / 3) {
+                    if (Neff < particle_filter.num_particles / 3) {
                         std::cout << " resample  " << std::endl;
 
                         particle_filter.resample();
+                        particle_filter.check_unique_particles();
                         node->publish_particles(particle_filter.particles);
 
                     }
@@ -162,7 +164,6 @@ int main(int argc, char **argv) {
 
 
                 } else {
-                    std::vector<Particle> particles = particle_filter.particles;
 
                     std::vector<Observation> observations;
                     observations.push_back(obs_);
@@ -183,7 +184,9 @@ int main(int argc, char **argv) {
 //                    if (Neff < (particle_filter.num_particles) / 3) {
                     std::cout << " resample  " << std::endl;
 
+                    node->publish_particles(particle_filter.particles);
                     particle_filter.resample();
+                    particle_filter.check_unique_particles();
                     node->publish_particles(particle_filter.particles);
 
 //                    }
@@ -193,10 +196,10 @@ int main(int argc, char **argv) {
 
                     Particle best_particle;
 
-                    for (int i = 0; i < particles.size(); ++i) {
-                        if (particles[i].weight > highest_weight) {
-                            highest_weight = particles[i].weight;
-                            best_particle = particles[i];
+                    for (int i = 0; i < particle_filter.particles.size(); ++i) {
+                        if (particle_filter.particles[i].weight > highest_weight) {
+                            highest_weight = particle_filter.particles[i].weight;
+                            best_particle = particle_filter.particles[i];
                         }
                     }
                     t.header.frame_id = "unity";
@@ -210,7 +213,7 @@ int main(int argc, char **argv) {
 
                 }
 
-                node->publish_particles(particle_filter.particles);
+//                node->publish_particles(particle_filter.particles);
                 t.header.stamp = rclcpp::Clock().now();
                 tf_broadcaster_->sendTransform(t);
                 //observation camera

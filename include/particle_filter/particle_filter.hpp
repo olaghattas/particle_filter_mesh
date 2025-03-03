@@ -54,8 +54,13 @@ private:
 
     // Vector of weights of all particles
     std::vector<double> weights;
+    // Random number generator
+//    std::random_device rd;
+//    std::mt19937 gen;
 
 public:
+
+    std::string monitoring = "";
     // Number of particles to draw
     int num_particles;
     bool no_readings = true;
@@ -83,10 +88,16 @@ public:
     std::string max_particles_loc;
 
     // Constructor
+    // gen: generates raw random numbers that can be passed into a distribution function to obtain random samples.
+
+//    ParticleFilter(int num) : num_particles(num), is_initialized(false) , gen(rd()) {}
     ParticleFilter(int num) : num_particles(num), is_initialized(false) {}
 
     // Destructor
     ~ParticleFilter() {}
+
+    void check_spread();
+    void add_noise(double std_dev);
 
     void init(std::pair<double, double> x, std::pair<double, double> y, std::pair<double, double> z,
               std::pair<double, double> theta);
@@ -109,8 +120,9 @@ public:
     void resample();
     void residual_resample();
     double calculateNeff();
+    void check_unique_particles();
 
-    void normalize_weights();
+    void normalize_weights(double sum);
     std::string find_landmark_with_most_particles();
 
     /**
@@ -128,7 +140,7 @@ public:
     void write_to_file(std::string filename);
     float sample(float mean, float variance);
     void particles_in_range(std::pair<double, double> x_bound, std::pair<double, double> y_bound, int ind_start);
-
+    void special_transitions();
 };
 
 

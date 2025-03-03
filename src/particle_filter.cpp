@@ -16,24 +16,43 @@
 #include "shr_utils/geometry.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
 
+
+#include <set>
+
+void ParticleFilter::check_unique_particles() {
+    std::set<std::pair<double, double>> unique_positions;
+
+    for (const auto& p : particles) {
+        unique_positions.insert({p.x, p.y});
+    }
+
+    std::cout << "Unique particles: " << unique_positions.size() << " out of " << num_particles << std::endl;
+
+    if (unique_positions.size() < num_particles * 0.5) { // Less than 50% unique
+        std::cout << "Warning: Particles have lost diversity!" << std::endl;
+    }
+}
+
 #define EPSILON 1e-4
 
-void ParticleFilter::normalize_weights() {
-    double sum_weights = 0.0;
+void ParticleFilter::normalize_weights(double sum_weights) {
 
-    // Compute the sum of all particle weights
-    for (const Particle &particle: particles) {
-        sum_weights += particle.weight;
+    // Only Compute the sum of all particle weights when its not passed
+    if (std::isnan(sum_weights)) {
+        sum_weights = 0.0;
+        for (const Particle &particle: particles) {
+            sum_weights += particle.weight;
+        }
     }
 
     // Normalize the weights so that they sum up to one
-    for (Particle &particle: particles) {
-        if (sum_weights > 0) {
-            particle.weight /= sum_weights;
-        } else {
-            particle.weight = 1.0 / particles.size(); // Assign equal weight if sum is zero
-        }
+    if (sum_weights == 0) {
+        // Handle edge case (e.g., all weights are zero)
+        for (auto& p : particles) p.weight = 1.0 / num_particles;
+    } else {
+        for (auto& p : particles) p.weight /= sum_weights;
     }
+
 }
 
 // Function to find the landmark with the most particles
@@ -103,10 +122,10 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
     previous_count = 0;
 
     // Add random Gaussian noise to each particle.
-    //    std::default_random_engine gen;
 
     std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 gen;
+
     std::uniform_real_distribution<double> xNoise(x_bound.first, x_bound.second);
     std::uniform_real_distribution<double> yNoise(y_bound.first, y_bound.second);
     std::uniform_real_distribution<double> zNoise(z_bound.first, z_bound.second);
@@ -116,12 +135,6 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
     particles.clear();
     weights.clear();
 
-    //    for (int i = 0; i < num_particles; ++i) {
-    //        Particle p = {i, xNoise(gen), yNoise(gen), zNoise(gen), yawNoise(gen), 1.0};
-    //        particles.push_back(p);
-    //        weights.push_back(1);
-    //
-    //    }
 
     // used write_to_file function ot save the distribution of the particles and used it to initialize
     // this ensures better coverage and easier to be done
@@ -146,7 +159,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         std::string id_str_, x_str_, y_str_, weight_str_;
         iss >> id_str_ >> id_str >> x_str_ >> x_str >> y_str_ >> y_str >> weight_str_ >> weight_str;
 
-        //        // Parse numerical values from the formatted strings
+        // Parse numerical values from the formatted strings
         p.id = std::stoi(id_str); // Skip "id:"
         p.x = std::stof(x_str); // Skip "x:"
         p.y = std::stof(y_str); // Skip "y:"
@@ -159,7 +172,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
     }
 
     file.close();
-    normalize_weights();
+    normalize_weights(std::nan(""));
 //    write_to_file("first_run.txt");
     is_initialized = true;
 
@@ -198,9 +211,9 @@ void ParticleFilter::particles_in_range(std::pair<double, double> x_bound, std::
                                         int ind_start) {
     std::uniform_real_distribution<double> xNoise(x_bound.first, x_bound.second);
     std::uniform_real_distribution<double> yNoise(y_bound.first, y_bound.second);
-
     std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 gen;
+
     for (int i = ind_start; i < ind_start + 10; ++i) {
         particles[i].x = xNoise(gen);
         particles[i].y = yNoise(gen);
@@ -210,11 +223,12 @@ void ParticleFilter::particles_in_range(std::pair<double, double> x_bound, std::
 
 void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
                                   std::vector<bool> doors_status, std::string observation) {
-    std::default_random_engine gen;
 //    std::normal_distribution<double> xNoise(0, std_pos[0]);
 //    std::normal_distribution<double> yNoise(0, std_pos[1]);
 //    std::normal_distribution<double> zNoise(0, std_pos[2]);
 //    std::normal_distribution<double> yawNoise(0, std_pos[3]);
+    std::random_device rd;
+    std::mt19937 gen;
 
     std::normal_distribution<double> xNoise(0, 0.25);
     std::normal_distribution<double> yNoise(0, 0.25);
@@ -307,7 +321,6 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
 
 void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
                                         std::vector<bool> doors_status) {
-    std::default_random_engine gen;
 
     std::normal_distribution<double> xNoise(0, 0.25);
     std::normal_distribution<double> yNoise(0, 0.25);
@@ -317,6 +330,8 @@ void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> st
 
     auto particles_before = particles;
 //    std::cout << "before p.x " << particles[0].x << std::endl;
+    std::random_device rd;
+    std::mt19937 gen;
     for (auto &p: particles) {
 
         // add noise randomly
@@ -337,10 +352,11 @@ void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> st
 
     ParticleFilter::enforce_non_collision(particles_before, doors_status, "");
 
-//    write_to_file("after_motion_model.txt");
 }
 
 // Function to calculate Neff
+// This metric ensures the particle filter maintains diversity and avoids particle depletion.
+// If all particles have equal weights, Neff=N, meaning all particles are equally contributing.
 double ParticleFilter::calculateNeff() {
     double sum_squared = 0.0;
     double w;
@@ -363,37 +379,41 @@ float ParticleFilter::sample(float mean, float variance) {
 }
 
 void ParticleFilter::resample() {
-    // low variance resampler
-//    write_to_file("before_resampling.txt");
-
     std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 gen;
+    // Low-variance resampler
     std::uniform_real_distribution<double> dist(0.0, 1.0 / num_particles);
 
+//    std::vector<Particle> resampled_particles(num_particles);
     std::vector<Particle> resampled_particles = particles;
 
-    double c = particles[0].weight;
-    int i = 0;
-    float r = double(dist(gen));
+    double c = particles[0].weight;; // Cumulative weight
+    int i = 0; // Index for the original particles
+    float r = double(dist(gen)); // Random starting point
 
     for (int m = 0; m < num_particles; m++) {
         float u = r + (float) m / num_particles;
+
+        // Find the particle whose cumulative weight satisfies u
         while (u > c && i < num_particles) {
             i++;
             c += particles[i].weight;
         }
-        resampled_particles[m].weight = particles[i].weight;
         resampled_particles[m].x = particles[i].x;
         resampled_particles[m].y = particles[i].y;
+        resampled_particles[m].weight =  1.0 / num_particles; // Reset weight
 
-//        resampled_particles[m].weight = 1.0 / num_particles;
     }
+
     particles = resampled_particles;
-    normalize_weights();
-//    write_to_file("after_resampling.txt");
+
+    // prevent particle collapse
+    add_noise(0.1);
 }
 
 void ParticleFilter::residual_resample() {
+    std::random_device rd;
+    std::mt19937 gen;
     int N = particles.size();
     std::vector<Particle> resampled_particles;
     resampled_particles.reserve(N);
@@ -436,8 +456,6 @@ void ParticleFilter::residual_resample() {
     std::partial_sum(residual_weights.begin(), residual_weights.end(), cumulative_sum.begin());
     cumulative_sum.back() = 1.0; // To avoid rounding errors
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
     std::uniform_real_distribution<double> dist(0.0, 1.0);
 
     while (resampled_particles.size() < N) {
@@ -451,13 +469,52 @@ void ParticleFilter::residual_resample() {
     particles = resampled_particles;
 
     // Normalize weights (optional, depending on downstream usage)
-    normalize_weights();
+    normalize_weights(std::nan(""));
 }
 
+//If you detect a collapse, you can add small random noise to maintain diversity:
+void ParticleFilter::add_noise(double std_dev) {
+    std::random_device rd;
+    std::mt19937 gen;
+    std::normal_distribution<double> noise(0.0, std_dev);
+
+    for (auto& p : particles) {
+        p.x += noise(gen);
+        p.y += noise(gen);
+    }
+}
+
+//If the variance is too small, particles are collapsing.
+void ParticleFilter::check_spread() {
+    double mean_x = 0.0, mean_y = 0.0;
+    double var_x = 0.0, var_y = 0.0;
+
+    for (const auto& p : particles) {
+        mean_x += p.x;
+        mean_y += p.y;
+    }
+    mean_x /= num_particles;
+    mean_y /= num_particles;
+
+    for (const auto& p : particles) {
+        var_x += (p.x - mean_x) * (p.x - mean_x);
+        var_y += (p.y - mean_y) * (p.y - mean_y);
+    }
+    var_x /= num_particles;
+    var_y /= num_particles;
+
+    std::cout << "Variance in X: " << var_x << ", Variance in Y: " << var_y << std::endl;
+
+    if (var_x < 1e-3 && var_y < 1e-3) {
+        std::cout << "Warning: Particles have collapsed to a single location!" << std::endl;
+    }
+}
 
 void ParticleFilter::updateWeightsWithObs(double std_landmark[],
                                           std::vector<Observation> observations,
                                           Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams) {
+
+    max_particles_loc = "";
     // Update the weights of each particle using a multi-variate Gaussian distribution. You can read
 
     double sigma_x = std_landmark[0];
@@ -487,61 +544,49 @@ void ParticleFilter::updateWeightsWithObs(double std_landmark[],
             extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
             extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
 
-//    if (previous_observation.size() < 10)
-//        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
-//    else {
-//        // Remove the oldest observation
-//        previous_observation.erase(previous_observation.begin());
-//
-//        // Add the newest observation
-//        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
-//    }
 
     /// ONLY ONE OBSERVATION AT A TIME
     current_observation = Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]);
 
+    const double gaussian_norm = 1.0 / (2 * M_PI * sigma_x * sigma_y);
+
     // loop through each of the particle to update
     for (int i = 0; i < num_particles; ++i) {
         Particle *p = &particles[i];
-        double weight = 1.0;
 
-        double x_ = p->x - current_obs.x;
-        double y_ = p->y - current_obs.y;
+        double dx = p->x - current_obs.x;
+        double dy = p->y - current_obs.y;
         double factor = 4;
 
         // Dynamically compute sigma based on the order of magnitude of x_ and y_
-        sigma_x = std::pow(10, std::floor(std::log10(std::abs(x_))) - 1); // Order of magnitude for x_
-        sigma_y = std::pow(10, std::floor(std::log10(std::abs(y_))) - 1);
+//        sigma_x = std::pow(10, std::floor(std::log10(std::abs(x_))) - 1); // Order of magnitude for x_
+//        sigma_y = std::pow(10, std::floor(std::log10(std::abs(y_))) - 1);
 
-        double gaussian = (std::pow(x_, 2) / (2 * factor * std::pow(sigma_x, 2))) +
-                          (std::pow(y_, 2) / (2 * std::pow(sigma_y, 2)));
+//        double gaussian = (std::pow(x_, 2) / (2 * factor * std::pow(sigma_x, 2))) +
+//                          (std::pow(y_, 2) / (2 * std::pow(sigma_y, 2)));
 
-        double gaussian_factor = 1 / (2 * M_PI * sigma_x * sigma_y);
-        gaussian = exp(-gaussian);
-        gaussian = gaussian * gaussian_factor;
+        double exponent = (dx * dx) / (2 * sigma_x * sigma_x)
+                          + (dy * dy) / (2 * sigma_y * sigma_y);
 
-        weight *= gaussian;
+//        double gaussian_factor = 1 / (2 * M_PI * sigma_x * sigma_y);
+//        gaussian = exp(-gaussian);
+        // Avoid numerical underflow for small exponents
+        double weight = gaussian_norm * exp(-exponent);
+//        gaussian = gaussian * gaussian_factor;
+
+//        weight *= gaussian;
         weights_sum += weight;
-        particles[i].weight = weight;
+        p->weight = weight;
     }
 
-    // if no observation
-
-    // normalize weights to bring them in (0, 1]
-    for (int i = 0; i < num_particles; i++) {
-        particles[i].weight /= weights_sum;
-    }
-
+    // Normalize weights
+    normalize_weights(weights_sum);
 }
 
 void ParticleFilter::updateWeightsWithoutObs(double std_landmark[]) {
     // Update the weights of each particle using a multi-variate Gaussian distribution. You can read
 
-    double sigma_x = std_landmark[0];
-    double sigma_y = std_landmark[1];
-    double sigma_z = std_landmark[2];
     double weights_sum = 0;
-
 
     // if there is an observation update the particle near the observation
 
@@ -561,6 +606,9 @@ void ParticleFilter::updateWeightsWithoutObs(double std_landmark[]) {
     for (int i = 0; i < num_particles; i++) {
         particles[i].weight /= weights_sum;
     }
+
+    max_particles_loc = find_landmark_with_most_particles();
+    std::cout << "max_loc _ " << max_particles_loc << std::endl;
 
 }
 
@@ -740,3 +788,21 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
     }
 }
 
+void special_transitions(){
+    // this function is triggered when person is in a special designated area
+    // those special areas are places where person can go from one room to another
+    // where the other room has no camera.
+
+    // if monitoring is not empty then person is not i a special location
+//    if (!monitoring.empty()){
+        // to exit monitory there are two cases
+
+        // 1- person is visible by another camera
+        // other words we get an observation outside of special area
+
+        // 2- if door is opened and robot
+
+
+
+//    }
+}

@@ -93,9 +93,14 @@ public:
                 "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
+//        pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+//                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
+//                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
+
         pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
+                "/zed_living_room_data_recording/zed_node_living_room_data_recording/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
+
 
         pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
                 "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
@@ -149,6 +154,7 @@ public:
     }
 
     std::vector<bool> getdoorstatus() {
+        // TRUE for closed and False for open
         // should align with patrticle filter enforce collision landmarks orderc
 //        bedroom_door, bathroom_door, living_room_door, outside_door
         return {door_bedroom, door_bathroom, door_outdoor};

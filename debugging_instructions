@@ -1,0 +1,18 @@
+ros2 run nav2_map_server map_server --ros-args -r map:=/map -p yaml_filename:=/home/olagh48652/particle_filter_mesh/map.yaml
+ros2 lifecycle set /map_server configure
+ros2 lifecycle set /map_server activate
+
+
+ros2 launch aptags_tf_broadcast tf_broadcast_helper.launch.py
+
+
+dealing with ros2 bag
+ros2 bag info corrina_activity_rec/
+ros2 bag play
+
+ros2 topic pub /zed_living_room_data_recording/zed_node_living_room_data_recording/body_trk/skeletons zed_interfaces/msg/ObjectsStamped "header:
+  stamp:
+    sec: 0
+    nanosec: 0
+  frame_id: ''
+objects: []"
