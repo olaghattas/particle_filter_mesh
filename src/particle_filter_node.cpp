@@ -75,17 +75,6 @@ int main(int argc, char **argv) {
     std::vector<bool> door_status_;
     double sigma_landmark[3] = {0.04, 0.04, 0.04};
 
-//    auto world_state_converter = std::make_shared<WorldStateListener>("WorldStatePDDLConverter", param_listener_);
-//    std::thread thread_1(
-//            [&world_state_converter]() {
-//                rclcpp::executors::MultiThreadedExecutor executor;
-//                executor.add_node(world_state_converter);
-//                while (!world_state_converter->should_terminate_node()) {
-//                    executor.spin_some();
-//                }
-//            }
-//    );
-
     particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
     node->publish_particles(particle_filter.particles);
 //    std::vector<Particle> particles = particle_filter.particles;
@@ -147,10 +136,18 @@ int main(int argc, char **argv) {
                     std::cout << "max_loc _ " << particle_filter.max_particles_loc << std::endl;
 
                     if (it != node->coordinate_map.end()) {
-                        t.transform.translation.x = std::get<0>(it->second);
-                        t.transform.translation.y = std::get<1>(it->second);
+                        double x = std::get<0>(it->second); ;
+                        double y = std::get<1>(it->second);;
+                        t.transform.translation.x = x;
+                        t.transform.translation.y = y;
                         t.transform.translation.z = std::get<2>(it->second);
+
+                        particle_filter.patient_x = x;
+                        particle_filter.patient_y = y;
+
                     } else {
+                        particle_filter.patient_x = std::nan("");
+                        particle_filter.patient_y = std::nan("");
                         // Handle the case where the landmark is not found in the map
                         RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Landmark %s not found in the map!",
                                      particle_filter.max_particles_loc.c_str());
@@ -200,6 +197,9 @@ int main(int argc, char **argv) {
                         if (particle_filter.particles[i].weight > highest_weight) {
                             highest_weight = particle_filter.particles[i].weight;
                             best_particle = particle_filter.particles[i];
+                            particle_filter.patient_x = best_particle.x;
+                            particle_filter.patient_y = best_particle.y;
+
                         }
                     }
                     t.header.frame_id = "unity";
@@ -213,12 +213,12 @@ int main(int argc, char **argv) {
 
                 }
 
+
 //                node->publish_particles(particle_filter.particles);
                 t.header.stamp = rclcpp::Clock().now();
                 tf_broadcaster_->sendTransform(t);
                 //observation camera
             }
-
 
         }
 

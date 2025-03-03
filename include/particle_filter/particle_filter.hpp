@@ -17,16 +17,11 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <opencv2/opencv.hpp>
+#include "particle_filter/helper.hpp"
 
 
-struct Particle {
-    int id;
-    double x;
-    double y;
-    double z;
-    double theta;
-    double weight;
-};
+
+
 
 struct Observation {
     std::string name;        // Id of matching landmark. landmark in our case is the joint we are starting with one but later will include all joints
@@ -54,11 +49,19 @@ private:
 
     // Vector of weights of all particles
     std::vector<double> weights;
+    std::vector<Particle> initial_part_dist;
+    TransitionMeshHandler transition_mesh_handler;
+    bool monitoring_flag = false;
+    bool obs_during_monitoring = false;
+    bool no_obs_during_monitoring = false;
+    bool door_of_int_open = false;
     // Random number generator
 //    std::random_device rd;
 //    std::mt19937 gen;
 
 public:
+    double patient_x = std::nan("");
+    double patient_y = std::nan("");
 
     std::string monitoring = "";
     // Number of particles to draw
@@ -94,7 +97,7 @@ public:
     ParticleFilter(int num) : num_particles(num), is_initialized(false) {}
 
     // Destructor
-    ~ParticleFilter() {}
+    ~ParticleFilter() = default;
 
     void check_spread();
     void add_noise(double std_dev);
@@ -140,7 +143,7 @@ public:
     void write_to_file(std::string filename);
     float sample(float mean, float variance);
     void particles_in_range(std::pair<double, double> x_bound, std::pair<double, double> y_bound, int ind_start);
-    void special_transitions();
+    void special_transitions(std::vector<bool> doors_status);
 };
 
 

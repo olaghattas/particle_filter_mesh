@@ -42,14 +42,24 @@ set(dependencies1
         std_msgs
         )
 
-# Add executable
+# Create a library from particle_filter.cpp
 add_library(particle_filter src/particle_filter.cpp)
 ament_target_dependencies(particle_filter ${dependencies1})
-
 target_link_libraries(particle_filter ${OpenCV_LIBRARIES})
 target_include_directories(particle_filter PUBLIC ${EIGEN3_INCLUDE_DIRS})
 
+# Create a library from helper.cpp
+add_library(helper_lib src/helper.cpp)
+ament_target_dependencies(helper_lib ${dependencies1})
+target_include_directories(helper_lib PUBLIC ${EIGEN3_INCLUDE_DIRS})
+target_link_libraries(helper_lib assimp::assimp ${OpenCV_LIBRARIES})
 
+# Ensure particle_filter links with helper_lib
+#target_link_libraries(particle_filter helper_lib)
+
+
+
+# Add executable
 add_executable(particle_filter_node src/particle_filter_node.cpp)
 ament_target_dependencies(particle_filter_node ${dependencies1})
 target_include_directories(particle_filter_node PUBLIC ${EIGEN3_INCLUDE_DIRS})
@@ -58,10 +68,14 @@ target_link_libraries(particle_filter_node yaml-cpp)
 target_link_libraries(particle_filter_node ${OpenCV_LIBRARIES})
 
 
-add_executable(helper src/helper.cpp)
-ament_target_dependencies(helper ${dependencies1})
-target_include_directories(helper PUBLIC ${EIGEN3_INCLUDE_DIRS})
-target_link_libraries(helper assimp::assimp ${OpenCV_LIBRARIES})
+# Ensure particle_filter_node links with helper_lib
+target_link_libraries(particle_filter_node helper_lib)
+
+
+#add_executable(helper src/helper.cpp)
+#ament_target_dependencies(helper ${dependencies1})
+#target_include_directories(helper PUBLIC ${EIGEN3_INCLUDE_DIRS})
+#target_link_libraries(helper assimp::assimp ${OpenCV_LIBRARIES})
 
 #add_executable(yaml_node src/example_yaml.cpp)
 #target_include_directories(yaml_node PUBLIC ${EIGEN3_INCLUDE_DIRS})
@@ -90,7 +104,7 @@ target_include_directories(particle_filter PUBLIC
         ${OpenCV_INCLUDE_DIRS}
         )
 
-target_include_directories(helper PUBLIC
+target_include_directories(helper_lib PUBLIC
         ${OpenCV_INCLUDE_DIRS}
 )
 
@@ -103,7 +117,7 @@ include_directories(
 install(TARGETS
         particle_filter
         particle_filter_node
-        helper
+        helper_lib
         DESTINATION lib/${PROJECT_NAME}
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib

@@ -16,7 +16,6 @@
 #include "shr_utils/geometry.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
 
-
 #include <set>
 
 void ParticleFilter::check_unique_particles() {
@@ -115,6 +114,8 @@ void ParticleFilter::write_to_file(std::string filename) {
 void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, double> y_bound,
                           std::pair<double, double> z_bound,
                           std::pair<double, double> theta_bound) {
+
+
     // TODO: find more areas to initialize particles
     avg_displacement(0.0, 0.0);
     previous_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
@@ -173,6 +174,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
 
     file.close();
     normalize_weights(std::nan(""));
+    initial_part_dist = particles;
 //    write_to_file("first_run.txt");
     is_initialized = true;
 
@@ -350,8 +352,9 @@ void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> st
     }
 //    std::cout << "after p.x " << particles[0].x << std::endl;
 
-    ParticleFilter::enforce_non_collision(particles_before, doors_status, "");
-
+    enforce_non_collision(particles_before, doors_status, "");
+    // check for speacial cases
+    special_transitions(doors_status);
 }
 
 // Function to calculate Neff
@@ -581,6 +584,12 @@ void ParticleFilter::updateWeightsWithObs(double std_landmark[],
 
     // Normalize weights
     normalize_weights(weights_sum);
+
+    // Function will be entered when there is an observation
+    if (monitoring_flag){
+        obs_during_monitoring =  true;
+    }
+
 }
 
 void ParticleFilter::updateWeightsWithoutObs(double std_landmark[]) {
@@ -609,6 +618,12 @@ void ParticleFilter::updateWeightsWithoutObs(double std_landmark[]) {
 
     max_particles_loc = find_landmark_with_most_particles();
     std::cout << "max_loc _ " << max_particles_loc << std::endl;
+
+
+
+    if (monitoring_flag){
+        no_obs_during_monitoring =  true;
+    }
 
 }
 
@@ -788,21 +803,64 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
     }
 }
 
-void special_transitions(){
+void ParticleFilter::special_transitions(std::vector<bool> doors_status){
+
+
+    if (isnan(patient_x) && isnan(patient_y)){
+        return;
+    }
+
     // this function is triggered when person is in a special designated area
     // those special areas are places where person can go from one room to another
     // where the other room has no camera.
 
-    // if monitoring is not empty then person is not i a special location
-//    if (!monitoring.empty()){
-        // to exit monitory there are two cases
 
-        // 1- person is visible by another camera
+    if (monitoring.empty()){
+        // check if person moved to a special location
+        monitoring = transition_mesh_handler.monitor_lndmark(patient_x, patient_y);
+
+    }
+
+    // if monitoring is not empty then person is in a special location
+    if (!monitoring.empty()){
+        monitoring_flag = true;
+        // doorstatus is true when closed
+        door_of_int_open = ! doors_status[transition_mesh_handler.aoi_to_door[monitoring]];
+
+        // to exit monitoring
+
+        // person is visible by another camera
         // other words we get an observation outside of special area
+        if (obs_during_monitoring) {
+            // if observation is not from monitored area then exit monitoring
+            // this indicates perosn went back inside
+            if (!transition_mesh_handler.check_person_at_loc(monitoring,patient_x, patient_y)){
+                monitoring_flag = false;
+                obs_during_monitoring = false;
+                no_obs_during_monitoring = false;
+                monitoring = "";
+                door_of_int_open = false;
+                return;
+            }
+        }
+        //
 
-        // 2- if door is opened and robot
+        // normalize particles after
+        if (no_obs_during_monitoring){
+            //  if door of interest is opened anytime during monitoring and person is no longer visible then
+            // we can assume person left and we can exit monitoring after sampling in dest location
+            if (door_of_int_open) {
+                // sample_in_bounds of destinametion of monitoring area
+                // TODO: if particles are be updated correctly
+                transition_mesh_handler.sample_in_bounds(transition_mesh_handler.get_dest(monitoring), particles);
+                monitoring_flag = false;
+                obs_during_monitoring = false;
+                no_obs_during_monitoring = false;
+                monitoring = "";
+                door_of_int_open = false;
+                return;
+            }
 
-
-
-//    }
+        }
+    }
 }
