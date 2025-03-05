@@ -411,7 +411,7 @@ void ParticleFilter::resample() {
     particles = resampled_particles;
 
     // prevent particle collapse
-    add_noise(0.1);
+//    add_noise(0.1);
 }
 
 void ParticleFilter::residual_resample() {
@@ -557,8 +557,8 @@ void ParticleFilter::updateWeightsWithObs(double std_landmark[],
     for (int i = 0; i < num_particles; ++i) {
         Particle *p = &particles[i];
 
-        double dx = p->x - current_obs.x;
-        double dy = p->y - current_obs.y;
+        double dx = p->x - TransformedPoint[0];
+        double dy = p->y - TransformedPoint[1];
         double factor = 4;
 
         // Dynamically compute sigma based on the order of magnitude of x_ and y_
@@ -577,9 +577,9 @@ void ParticleFilter::updateWeightsWithObs(double std_landmark[],
         double weight = gaussian_norm * exp(-exponent);
 //        gaussian = gaussian * gaussian_factor;
 
-//        weight *= gaussian;
         weights_sum += weight;
-        p->weight = weight;
+//        p->weight = weight;
+        particles[i].weight = weight;
     }
 
     // Normalize weights
@@ -804,55 +804,59 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
 }
 
 void ParticleFilter::special_transitions(std::vector<bool> doors_status){
-
+    std::cout << "Entering special_transitions function." << std::endl;
 
     if (isnan(patient_x) && isnan(patient_y)){
+        std::cout << "Patient position is NaN, exiting function." << std::endl;
         return;
     }
 
-    // this function is triggered when person is in a special designated area
-    // those special areas are places where person can go from one room to another
-    // where the other room has no camera.
-
+    std::cout << "Checking if person is in a special designated area..." << std::endl;
 
     if (monitoring.empty()){
-        // check if person moved to a special location
+        std::cout << "Person not currently being monitored. Checking special locations..." << std::endl;
         monitoring = transition_mesh_handler.monitor_lndmark(patient_x, patient_y);
-
+        if (!monitoring.empty()) {
+            std::cout << "Person entered special monitoring area: " << monitoring << std::endl;
+        }
     }
 
-    // if monitoring is not empty then person is in a special location
     if (!monitoring.empty()){
         monitoring_flag = true;
-        // doorstatus is true when closed
-        door_of_int_open = ! doors_status[transition_mesh_handler.aoi_to_door[monitoring]];
+        std::cout << "Person is in a special area: " << monitoring << std::endl;
 
-        // to exit monitoring
+        int door_index = transition_mesh_handler.aoi_to_door[monitoring];
+        door_of_int_open = !doors_status[door_index];
+        std::cout << "Door status: " << door_of_int_open << std::endl;
 
-        // person is visible by another camera
-        // other words we get an observation outside of special area
         if (obs_during_monitoring) {
-            // if observation is not from monitored area then exit monitoring
-            // this indicates perosn went back inside
-            if (!transition_mesh_handler.check_person_at_loc(monitoring,patient_x, patient_y)){
+            std::cout << "Observation detected during monitoring." << std::endl;
+
+            if (!transition_mesh_handler.check_person_at_loc(monitoring, patient_x, patient_y)){
+                std::cout << "Person left special area, exiting monitoring." << std::endl;
                 monitoring_flag = false;
                 obs_during_monitoring = false;
                 no_obs_during_monitoring = false;
                 monitoring = "";
                 door_of_int_open = false;
+
+                std::cout << "Resetting particles to initial distribution." << std::endl;
+                particles = initial_part_dist;
                 return;
             }
+
+            obs_during_monitoring = false;
         }
-        //
 
-        // normalize particles after
         if (no_obs_during_monitoring){
-            //  if door of interest is opened anytime during monitoring and person is no longer visible then
-            // we can assume person left and we can exit monitoring after sampling in dest location
+            std::cout << "No observations detected during monitoring." << std::endl;
+
             if (door_of_int_open) {
-                // sample_in_bounds of destinametion of monitoring area
-                // TODO: if particles are be updated correctly
-                transition_mesh_handler.sample_in_bounds(transition_mesh_handler.get_dest(monitoring), particles);
+                std::cout << "Door opened during monitoring. Assuming person has left." << std::endl;
+                std::cout << "Sampling particles in destination area." << std::endl;
+
+                transition_mesh_handler.sample_in_bounds(monitoring, particles);
+
                 monitoring_flag = false;
                 obs_during_monitoring = false;
                 no_obs_during_monitoring = false;
@@ -861,6 +865,9 @@ void ParticleFilter::special_transitions(std::vector<bool> doors_status){
                 return;
             }
 
+            no_obs_during_monitoring = false;
         }
     }
+
+    std::cout << "Exiting special_transitions function." << std::endl;
 }

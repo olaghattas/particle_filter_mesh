@@ -89,8 +89,10 @@ int main(int argc, char **argv) {
         } else {
 
             door_status_ = node->getdoorstatus();
-            // Initialize the particle filter in a uniform distribution
 
+            std::cout << "{door_bedroom, door_bathroom, door_outdoor};" << std::endl;
+            std::cout << "door_status_ close: " << door_status_[2] << std::endl;
+            // Initialize the particle filter in a uniform distribution
 
             obs_ = node->getObservation();
             first_obs = node->first_obs;
@@ -103,7 +105,7 @@ int main(int argc, char **argv) {
                 // Fill in the message
                 geometry_msgs::msg::TransformStamped t;
                 /// should be whatever the code is expecting the name to be
-                t.child_frame_id = "nathan";
+                t.child_frame_id = "nathan1";
 
                 particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_);
                 node->publish_particles(particle_filter.particles);

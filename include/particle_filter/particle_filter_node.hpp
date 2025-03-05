@@ -51,6 +51,11 @@ private:
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_lv;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dw;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_cor;
+
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_outdoor_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bedroom_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bathroom_sub;
+
     Observation observation; // Member variable to store the observation
     // to prevent overriding
     Observation observation_kitchen; // Member variable to store the observation from kitchen
@@ -93,14 +98,18 @@ public:
                 "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
+        pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
+                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
+//
 //        pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-//                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
+//                "/living_room/zed_node/body_trk/skeletons", 1,
 //                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
 
-        pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_living_room_data_recording/zed_node_living_room_data_recording/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
 
+//        pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+//                "/doorway/zed_node/body_trk/skeletons", 1,
+//                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
 
         pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
                 "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
@@ -111,13 +120,13 @@ public:
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_corridor(msg); });
 
 
-        auto door_outdoor_sub = create_subscription<std_msgs::msg::Bool>(
+        door_outdoor_sub = create_subscription<std_msgs::msg::Bool>(
                 "/smartthings_sensors_door_outdoor", 10,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorOutdoorCallback(msg); });
-        auto door_bedroom_sub = create_subscription<std_msgs::msg::Bool>(
+        door_bedroom_sub = create_subscription<std_msgs::msg::Bool>(
                 "/smartthings_sensors_door_bedroom", 10,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBedroomCallback(msg); });
-        auto door_bathroom_sub = create_subscription<std_msgs::msg::Bool>(
+        door_bathroom_sub = create_subscription<std_msgs::msg::Bool>(
                 "/smartthings_sensors_door_bathroom", 10,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBathroomCallback(msg); });
     }
@@ -395,28 +404,6 @@ public:
                                                                                      "zed_" + cam + "_cam");
             cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
 
-            // incase needed later
-//            } else {
-//                // Get transformation matrix from camera to aptag /// from aptag detection
-//                std::cout << " cam_cam " << cam << std::endl;
-//                std::cout << "  " << map_cam_aptag[cam] << "  " << "zed_" + cam + "_left_camera_frame" << std::endl;
-////
-//                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_aptag = transform_tf(map_cam_aptag[cam],
-//                                                                                           "zed_" + cam +
-//                                                                                           "_left_camera_frame");
-//                std::cout << " t_cam_to_aptag " << t_cam_to_aptag << std::endl;
-////
-//                // Get transformation matrix from map to waptag
-//                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_waptag_to_cam = transform_tf("unity",
-//                                                                                            map_cam_aptag_un[cam]);
-//                std::cout << " t_waptag_to_cam " << t_waptag_to_cam << std::endl;
-////
-////            // Get transformation matrix from map to aptag
-//                Eigen::Matrix<double, 4, 4, Eigen::RowMajor> t_cam_to_map = t_waptag_to_cam * t_cam_to_aptag;
-//                std::cout << " t_cam_to_map " << t_cam_to_map << std::endl;
-////
-//                cameraextrinsics.insert(std::make_pair(cam, t_cam_to_map));
-//            }
         }
     }
 

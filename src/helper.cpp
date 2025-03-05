@@ -131,8 +131,8 @@ void TransitionMeshHandler::sample_in_bounds(const std::string& monitored_area, 
 
     for (auto &p: particles) {
         // Generate random values within the bounds
-        p.x += static_cast<double>(dist_x(gen));
-        p.y +=  static_cast<double>(dist_y(gen));
+        p.x = static_cast<double>(dist_x(gen));
+        p.y =  static_cast<double>(dist_y(gen));
     }
 }
 
