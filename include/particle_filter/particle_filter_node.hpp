@@ -33,6 +33,7 @@
 
 #include "zed_interfaces/msg/objects_stamped.hpp"
 #include <std_msgs/msg/float32_multi_array.hpp>
+#include "std_msgs/msg/int32.hpp"
 #include "particle_filter_msgs/msg/pose_msg.hpp"
 #include "zed_interfaces/msg/bounding_box3_d.hpp"
 #include "zed_interfaces/msg/object.hpp"
@@ -52,16 +53,28 @@ private:
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dw;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_cor;
 
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr k_label_H;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr lv_label_H;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr dw_label_H;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr cor_label_H;
+
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr k_label_F;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr lv_label_F;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr dw_label_F;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr cor_label_F;
+
+
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_outdoor_sub;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bedroom_sub;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bathroom_sub;
 
-    Observation observation; // Member variable to store the observation
+//    Observation observation; // Member variable to store the observation
     // to prevent overriding
-    Observation observation_kitchen; // Member variable to store the observation from kitchen
-    Observation observation_living; // Member variable to store the observation from dining
-    Observation observation_doorway; // Member variable to store the observation from doorway
-    Observation observation_corridor; // Member variable to store the observation from corridor
+    // Member variable to store the observation
+    Observation observation_kitchen;
+    Observation observation_living;
+    Observation observation_doorway;
+    Observation observation_corridor;
 
     rclcpp::TimerBase::SharedPtr timer_{nullptr};
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
@@ -73,6 +86,17 @@ private:
     bool door_outdoor;
     bool door_bedroom;
     bool door_bathroom;
+
+    int k_label_h = -1;
+    int lv_label_h= -1;
+    int dw_label_h= -1;
+    int coor_label_h= -1;
+
+    int k_label_f= -1;
+    int lv_label_f= -1;
+    int dw_label_f= -1;
+    int coor_label_f= -1;
+
 
 
 
@@ -129,6 +153,98 @@ public:
         door_bathroom_sub = create_subscription<std_msgs::msg::Bool>(
                 "/smartthings_sensors_door_bathroom", 10,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBathroomCallback(msg); });
+
+        k_label_H = create_subscription<std_msgs::msg::Int32>(
+                "/k_label_H", 10,
+                [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_Callback(msg); });
+
+        lv_label_H = create_subscription<std_msgs::msg::Int32>(
+                "/lv_label_H", 10,
+                [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_Callback(msg); });
+
+        dw_label_H = create_subscription<std_msgs::msg::Int32>(
+                "/dw_label_H", 10,
+                [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_Callback(msg); });
+
+        cor_label_H = create_subscription<std_msgs::msg::Int32>(
+                "/cor_label_H", 10,
+                [this](const std_msgs::msg::Int32::SharedPtr msg) { cor_label_Callback(msg); });
+
+
+        k_label_F = create_subscription<std_msgs::msg::Int32>(
+                "/k_label_F", 10,
+                [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_f_Callback(msg); });
+
+        lv_label_F = create_subscription<std_msgs::msg::Int32>(
+                "/lv_label_F", 10,
+                [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_f_Callback(msg); });
+
+        dw_label_F = create_subscription<std_msgs::msg::Int32>(
+                "/dw_label_F", 10,
+                [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_f_Callback(msg); });
+
+        cor_label_F = create_subscription<std_msgs::msg::Int32>(
+                "/cor_label_F", 10,
+                [this](const std_msgs::msg::Int32::SharedPtr msg) { cor_label_f_Callback(msg); });
+
+
+
+    }
+
+    void k_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
+        k_label_h = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
+        std::cout << "k_label_h " << k_label_h << std::endl;
+    }
+
+    void lv_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
+        lv_label_h = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
+        std::cout << "lv_label_h " << lv_label_h << std::endl;
+    }
+
+    void dw_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
+        dw_label_h = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
+        std::cout << "dw_label_h " << dw_label_h << std::endl;
+    }
+
+    void cor_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
+        coor_label_h = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
+        std::cout << "coor_label_h " << coor_label_h << std::endl;
+    }
+
+    void k_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
+        k_label_f = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
+        std::cout << "k_label_h " << k_label_f << std::endl;
+    }
+
+    void lv_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
+        lv_label_f = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
+        std::cout << "lv_label_f " << lv_label_f << std::endl;
+    }
+
+    void dw_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
+        dw_label_f = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
+        std::cout << "dw_label_f " << dw_label_f << std::endl;
+    }
+
+    void cor_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
+        coor_label_f = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
+        std::cout << "coor_label_f " << coor_label_f << std::endl;
     }
 
     // save coordinate map
@@ -170,19 +286,27 @@ public:
     }
 
     Observation getObservation() {
+
+        // Prioritize any observation where is_person_h is true
+        if (observation_kitchen.des_pers) return observation_kitchen;
+        if (observation_doorway.des_pers) return observation_doorway;
+        if (observation_living.des_pers) return observation_living;
+        if (observation_corridor.des_pers) return observation_corridor;
+
+        Observation selected_observation;
         float distance_to_person = 100.0;
         std::string name = "";
 
         if (observation_kitchen.name != "") {
             distance_to_person = observation_kitchen.x;
             std::cout << "observation in kitchen" << observation_kitchen.name << std::endl;
-            observation = observation_kitchen;
+            selected_observation = observation_kitchen;
         }
 
         if (observation_doorway.name != "") {
             if (distance_to_person > observation_doorway.x) {
                 distance_to_person = observation_doorway.x;
-                observation = observation_doorway;
+                selected_observation = observation_doorway;
             }
             std::cout << "observation in doorway " << observation_doorway.name << std::endl;
 //            return observation = observation_doorway;
@@ -190,7 +314,7 @@ public:
         if (observation_living.name != "") {
             if (distance_to_person > observation_living.x) {
                 distance_to_person = observation_living.x;
-                observation = observation_living;
+                selected_observation = observation_living;
                 std::cout << "observation in living " << observation_doorway.name << std::endl;
             }
 
@@ -198,138 +322,132 @@ public:
         if (observation_corridor.name != "") {
             if (distance_to_person > observation_corridor.x) {
                 distance_to_person = observation_corridor.x;
-                observation = observation_corridor;
+                selected_observation = observation_corridor;
                 std::cout << "observation in corridor " << observation_doorway.name << std::endl;
             }
 
         }
 
         if (distance_to_person == 100.0) {
-            observation.name = "";
+            selected_observation.name = "";
         }else{
             first_obs = true;
         }
 //        std::cout << "observation closest in " << observation.name << std::endl;
-        return observation;
+        return selected_observation;
 
     }
+
+
+
 
     void PosePixCallback_kitchen(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        //# 2 -> POSE_38
-        std::cout << " ************** Person detected in kitchen" << std::endl;
-
-        if (!msg->objects.empty()) {
-            observation_kitchen.name = "kitchen";
-            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
-            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-            for (int i = 0; i < 8; i++) {
-                sum_x += bounding_box.corners[i].kp[0];
-                sum_y += bounding_box.corners[i].kp[1];
-                sum_z += bounding_box.corners[i].kp[2];
-            }
-
-            // Calculate the centroid
-            observation_kitchen.x = sum_x / 8.0;
-            observation_kitchen.y = sum_y / 8.0;
-            observation_kitchen.z = sum_z / 8.0;
-
-            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
-            sigma_pos[3] = 0.1;
-
-        } else {
-//            std::cout << "no person detected in kitchen" << std::endl;
-            observation_kitchen.name = "";
-
-        }
-    }
-
-    void PosePixCallback_doorway(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        //# 2 -> POSE_38
-        if (!msg->objects.empty()) {
-            observation_doorway.name = "doorway";
-            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
-            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-            for (int i = 0; i < 8; i++) {
-                sum_x += bounding_box.corners[i].kp[0];
-                sum_y += bounding_box.corners[i].kp[1];
-                sum_z += bounding_box.corners[i].kp[2];
-            }
-
-            // Calculate the centroid
-            observation_doorway.x = sum_x / 8.0;
-            observation_doorway.y = sum_y / 8.0;
-            observation_doorway.z = sum_z / 8.0;
-
-            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
-            sigma_pos[3] = 0.1;
-
-        } else {
-//            std::cout << "no person detected in doorway" << std::endl;
-            observation_doorway.name = "";
-
-        }
-    }
-
-    void PosePixCallback_corridor(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        //# 2 -> POSE_38
-        if (!msg->objects.empty()) {
-            observation_corridor.name = "corridor";
-            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
-            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-            for (int i = 0; i < 8; i++) {
-                sum_x += bounding_box.corners[i].kp[0];
-                sum_y += bounding_box.corners[i].kp[1];
-                sum_z += bounding_box.corners[i].kp[2];
-            }
-
-            // Calculate the centroid
-            observation_corridor.x = sum_x / 8.0;
-            observation_corridor.y = sum_y / 8.0;
-            observation_corridor.z = sum_z / 8.0;
-
-            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
-            sigma_pos[3] = 0.1;
-
-        } else {
-//            std::cout << "no person detected in doorway" << std::endl;
-            observation_corridor.name = "";
-
-        }
+        PosePixCallback_generic(msg, "kitchen", k_label_h, k_label_f, observation_kitchen);
     }
 
     void PosePixCallback_living_room(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        if (!msg->objects.empty()) {
-            observation_living.name = "living_room";
-            zed_interfaces::msg::BoundingBox3D bounding_box = msg->objects[0].bounding_box_3d;
-            float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
-            for (int i = 0; i < 8; i++) {
-                sum_x += bounding_box.corners[i].kp[0];
-                sum_y += bounding_box.corners[i].kp[1];
-                sum_z += bounding_box.corners[i].kp[2];
+        PosePixCallback_generic(msg, "living_room", lv_label_h, lv_label_f, observation_living);
+    }
+
+    void PosePixCallback_corridor(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+        PosePixCallback_generic(msg, "corridor", coor_label_h, coor_label_f, observation_corridor);
+    }
+
+    void PosePixCallback_doorway(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+        PosePixCallback_generic(msg, "doorway", dw_label_h, dw_label_f, observation_doorway);
+    }
+
+    void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, int &label_f, Observation& obs) {
+        std::cout << " ************** PosePixCallback in " << location << std::endl;
+
+        // Reset observation
+        obs.name = "";
+        obs.des_pers = false;  // Flag to indicate if it's person h
+
+        if (msg->objects.empty()) {
+            return;  // No objects to process
+        }
+
+        // Initially assume no valid observation
+        bool found_person_h = false;
+        bool found_person_f = false;
+        bool found_valid_person = false;
+        std::vector<zed_interfaces::msg::Object>::size_type fallback_ind = -1;  // Index of the first valid object
+
+        // If both labels are empty, take the first observation
+        if (label_h == -1 && label_f == -1) {
+            SetObservation(msg->objects[0], false, location, obs);
+            return;
+        }
+
+        // Process objects to find person h or a valid object
+        for (std::vector<zed_interfaces::msg::Object>::size_type ind = 0; ind < msg->objects.size(); ++ind) {
+            const auto &obj = msg->objects[ind];
+
+            if (obj.label_id == label_f) {
+                found_person_f = true;
+                continue;  // Skip Florence objects
             }
 
-            // Calculate the centroid
-            observation_living.x = sum_x / 8.0;
-            observation_living.y = sum_y / 8.0;
-            observation_living.z = sum_z / 8.0;
+            if (obj.label_id == label_h) {
+                found_person_h = true;
+                SetObservation(obj, true, location, obs);  // It's person h
+                return;  // Person H found, no need to check further
+            }
 
-            sigma_pos[0] = msg->objects[0].dimensions_3d[0];
-            sigma_pos[1] = msg->objects[0].dimensions_3d[1];
-            sigma_pos[2] = msg->objects[0].dimensions_3d[2];
-            sigma_pos[3] = 0.1;
+            // Store the first valid object (not f or h)
+            if (!found_valid_person) {
+                fallback_ind = ind;
+                found_valid_person = true;
+            }
+        }
 
-        } else {
-//            std::cout << "no person detected in living_room" << std::endl;
-            observation_living.name = "";
+        // Handle cases where person h or f wasn't found
+        if (label_h != -1) {
+            label_h = -1;  // Label h is no longer valid
+        }
+        if (label_f != -1 && !found_person_f) {
+            label_f = -1;  // Label f is no longer valid
+        }
 
+        // If person h was not found, fallback to the first valid object
+        if (!found_person_h && found_valid_person) {
+            SetObservation(msg->objects[fallback_ind], false, location, obs);  // Not person h
         }
     }
+
+// Function to set the observation based on whether it's person h or not
+    void SetObservation(const zed_interfaces::msg::Object &obj, bool is_person_h, const std::string &location_name, Observation &obs) {
+        obs.name = location_name;
+        obs.des_pers = is_person_h;  // Flag for person h
+
+        SetCentroidAndDimensions(obj, obs);
+    }
+
+// Function to calculate centroid and set object dimensions
+    void SetCentroidAndDimensions(const zed_interfaces::msg::Object &obj, Observation &obs) {
+        zed_interfaces::msg::BoundingBox3D bounding_box = obj.bounding_box_3d;
+        float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
+
+        for (int i = 0; i < 8; ++i) {
+            sum_x += bounding_box.corners[i].kp[0];
+            sum_y += bounding_box.corners[i].kp[1];
+            sum_z += bounding_box.corners[i].kp[2];
+        }
+
+        // Calculate centroid
+        obs.x = sum_x / 8.0;
+        obs.y = sum_y / 8.0;
+        obs.z = sum_z / 8.0;
+
+        // TODO: use sigma
+        sigma_pos[0] = obj.dimensions_3d[0];
+        sigma_pos[1] = obj.dimensions_3d[1];
+        sigma_pos[2] = obj.dimensions_3d[2];
+        sigma_pos[3] = 0.1;  // Default sigma value for uncertainty
+    }
+
+
 
     void publish_3d_point(float x, float y, float z, std::string frame_id, float r, float g, float b) {
         auto marker_msg = std::make_shared<visualization_msgs::msg::Marker>();

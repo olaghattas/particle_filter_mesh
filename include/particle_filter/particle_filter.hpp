@@ -28,6 +28,7 @@ struct Observation {
     double x;      // x position of landmark (joint) in world
     double y;      // y position of landmark (joint) in world
     double z;      // z position of landmark (joint) in world
+    bool des_pers; // yes if the observation is for the person (based on face recognition)
 }; // going to be 1x2 for now (left shoulder joint)
 
 /*
