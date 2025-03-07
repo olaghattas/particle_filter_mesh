@@ -19,10 +19,6 @@
 #include <opencv2/opencv.hpp>
 #include "particle_filter/helper.hpp"
 
-
-
-
-
 struct Observation {
     std::string name;        // Id of matching landmark. landmark in our case is the joint we are starting with one but later will include all joints
     double x;      // x position of landmark (joint) in world
@@ -110,7 +106,7 @@ public:
                       std::vector<bool> doors_status, std::string observation);
 
     void motion_model_noisy(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
-                       std::vector<bool> doors_status);
+                       std::vector<bool> doors_status,std::string obs_name);
 
     void updateWeights(double std_landmark[],
                        std::vector<Observation> observations,

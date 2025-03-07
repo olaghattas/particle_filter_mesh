@@ -48,6 +48,7 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_3d_pt;
 
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
+
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_k;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_lv;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dw;
@@ -66,9 +67,10 @@ private:
 
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_outdoor_sub;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bedroom_sub;
-    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bathroom_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_atelier_sub;
 
-//    Observation observation; // Member variable to store the observation
+    // Observation observation; // Member variable to store the observation
+
     // to prevent overriding
     // Member variable to store the observation
     Observation observation_kitchen;
@@ -118,22 +120,23 @@ public:
 
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
+        // olson
         pose_sub_k = create_subscription<zed_interfaces::msg::ObjectsStamped>(
                 "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
         pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
+                "/zed_bedroom/zed_node_bedroom/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
+
+
+//        pose_sub_k = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+//                "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
+//                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 //
 //        pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-//                "/living_room/zed_node/body_trk/skeletons", 1,
+//                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
 //                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
-
-
-//        pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-//                "/doorway/zed_node/body_trk/skeletons", 1,
-//                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
 
         pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
                 "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
@@ -143,48 +146,61 @@ public:
                 "/zed_corridor/zed_node_corridor/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_corridor(msg); });
 
-
+//        ds1
         door_outdoor_sub = create_subscription<std_msgs::msg::Bool>(
-                "/smartthings_sensors_door_outdoor", 10,
+                "/sensors_main_door", 10,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorOutdoorCallback(msg); });
+        // ds2
         door_bedroom_sub = create_subscription<std_msgs::msg::Bool>(
-                "/smartthings_sensors_door_bedroom", 10,
+                "/sensors_bedroom_door", 10,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBedroomCallback(msg); });
-        door_bathroom_sub = create_subscription<std_msgs::msg::Bool>(
-                "/smartthings_sensors_door_bathroom", 10,
+        // ds3
+        door_atelier_sub = create_subscription<std_msgs::msg::Bool>(
+                "/sensors_atelier_door", 10,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBathroomCallback(msg); });
 
+
+        // todo:  s should be h but for lab testing
         k_label_H = create_subscription<std_msgs::msg::Int32>(
-                "/k_label_H", 10,
+                "/kitchen_s_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_Callback(msg); });
 
+//        lv_label_H = create_subscription<std_msgs::msg::Int32>(
+//                "/living_room_h_label", 10,
+//                [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_Callback(msg); });
+
         lv_label_H = create_subscription<std_msgs::msg::Int32>(
-                "/lv_label_H", 10,
+                "bedroom_s_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_Callback(msg); });
 
+
         dw_label_H = create_subscription<std_msgs::msg::Int32>(
-                "/dw_label_H", 10,
+                "/doorway_h_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_Callback(msg); });
 
         cor_label_H = create_subscription<std_msgs::msg::Int32>(
-                "/cor_label_H", 10,
+                "/cooridor_h_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { cor_label_Callback(msg); });
 
 
         k_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/k_label_F", 10,
+                "/kitchen_h_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_f_Callback(msg); });
 
+//        lv_label_F = create_subscription<std_msgs::msg::Int32>(
+//                "/living_room_s_label", 10,
+//                [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_f_Callback(msg); });
+
         lv_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/lv_label_F", 10,
+                "/bedroom_h_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_f_Callback(msg); });
 
         dw_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/dw_label_F", 10,
+                "/doorway_s_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_f_Callback(msg); });
 
         cor_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/cor_label_F", 10,
+                "/cooridor_s_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { cor_label_f_Callback(msg); });
 
 
@@ -338,9 +354,6 @@ public:
 
     }
 
-
-
-
     void PosePixCallback_kitchen(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
         PosePixCallback_generic(msg, "kitchen", k_label_h, k_label_f, observation_kitchen);
     }
@@ -411,7 +424,7 @@ public:
         }
 
         // If person h was not found, fallback to the first valid object
-        if (!found_person_h && found_valid_person) {
+        if (found_valid_person) {
             SetObservation(msg->objects[fallback_ind], false, location, obs);  // Not person h
         }
     }
@@ -446,8 +459,6 @@ public:
         sigma_pos[2] = obj.dimensions_3d[2];
         sigma_pos[3] = 0.1;  // Default sigma value for uncertainty
     }
-
-
 
     void publish_3d_point(float x, float y, float z, std::string frame_id, float r, float g, float b) {
         auto marker_msg = std::make_shared<visualization_msgs::msg::Marker>();

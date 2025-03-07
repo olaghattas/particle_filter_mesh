@@ -27,6 +27,8 @@ find_package(yaml-cpp REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(shr_utils REQUIRED)
 find_package(assimp REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 set(dependencies1
         rclcpp
@@ -58,7 +60,6 @@ target_link_libraries(helper_lib assimp::assimp ${OpenCV_LIBRARIES})
 #target_link_libraries(particle_filter helper_lib)
 
 
-
 # Add executable
 add_executable(particle_filter_node src/particle_filter_node.cpp)
 ament_target_dependencies(particle_filter_node ${dependencies1})
@@ -66,6 +67,16 @@ target_include_directories(particle_filter_node PUBLIC ${EIGEN3_INCLUDE_DIRS})
 target_include_directories(particle_filter_node PUBLIC ${YAML_CPP_INCLUDE_DIRS})
 target_link_libraries(particle_filter_node yaml-cpp)
 target_link_libraries(particle_filter_node ${OpenCV_LIBRARIES})
+
+# Add executable
+add_executable(transformation_test src/transformation_test.cpp)
+ament_target_dependencies(transformation_test ${dependencies1})
+ament_target_dependencies(transformation_test tf2 tf2_geometry_msgs)
+
+target_include_directories(transformation_test PUBLIC ${EIGEN3_INCLUDE_DIRS})
+target_include_directories(transformation_test PUBLIC ${YAML_CPP_INCLUDE_DIRS})
+target_link_libraries(transformation_test yaml-cpp)
+target_link_libraries(transformation_test ${OpenCV_LIBRARIES})
 
 
 # Ensure particle_filter_node links with helper_lib
@@ -95,6 +106,10 @@ install(
 #target_include_directories(particle_filter_node PUBLIC
 #        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 #        $<INSTALL_INTERFACE:include>)
+target_include_directories(transformation_test PUBLIC
+        ${YAML_CPP_LIBRARIES}
+        ${OpenCV_INCLUDE_DIRS}
+)
 target_include_directories(particle_filter_node PUBLIC
         ${YAML_CPP_LIBRARIES}
         ${OpenCV_INCLUDE_DIRS}
@@ -115,6 +130,7 @@ include_directories(
 )
 
 install(TARGETS
+        transformation_test
         particle_filter
         particle_filter_node
         helper_lib

@@ -105,9 +105,9 @@ int main(int argc, char **argv) {
                 // Fill in the message
                 geometry_msgs::msg::TransformStamped t;
                 /// should be whatever the code is expecting the name to be
-                t.child_frame_id = "nathan1";
+                t.child_frame_id = "nathan";
 
-                particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_);
+                particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
                 node->publish_particles(particle_filter.particles);
 
                 if (obs_.name.empty()) {

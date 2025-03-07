@@ -315,14 +315,13 @@ void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos,
     }
 
 
-    ParticleFilter::enforce_non_collision(particles_before, doors_status, observation
-    );
+    ParticleFilter::enforce_non_collision(particles_before, doors_status, observation);
 
 //    write_to_file("after_motion_model.txt");
 }
 
 void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
-                                        std::vector<bool> doors_status) {
+                                        std::vector<bool> doors_status, std::string observation) {
 
     std::normal_distribution<double> xNoise(0, 0.25);
     std::normal_distribution<double> yNoise(0, 0.25);
@@ -352,7 +351,7 @@ void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> st
     }
 //    std::cout << "after p.x " << particles[0].x << std::endl;
 
-    enforce_non_collision(particles_before, doors_status, "");
+    enforce_non_collision(particles_before, doors_status, observation);
     // check for speacial cases
     special_transitions(doors_status);
 }

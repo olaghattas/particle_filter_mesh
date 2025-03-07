@@ -35,7 +35,7 @@ TransitionMeshHandler::TransitionMeshHandler() {
 
 void TransitionMeshHandler::init() {
         std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
-        auto mesh_file = (pkg_dir / "config" / "transition_2.obj").string();
+        auto mesh_file = (pkg_dir / "config" / "olson_trans.obj").string();
 
         auto [mesh_verts, mesh_names] = shr_utils::load_meshes_squares(mesh_file);
         for (int i = 0; i < mesh_names.size(); i++) {
