@@ -68,6 +68,8 @@ private:
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_outdoor_sub;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bedroom_sub;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_atelier_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr ms_bedroom_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr ms_corr_sub;
 
     // Observation observation; // Member variable to store the observation
 
@@ -88,6 +90,8 @@ private:
     bool door_outdoor;
     bool door_bedroom;
     bool door_bathroom;
+    bool ms_bedroom;
+    bool ms_corridor;
 
     int k_label_h = -1;
     int lv_label_h= -1;
@@ -98,6 +102,8 @@ private:
     int lv_label_f= -1;
     int dw_label_f= -1;
     int coor_label_f= -1;
+
+
 
 
 
@@ -159,6 +165,16 @@ public:
                 "/sensors_atelier_door", 10,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBathroomCallback(msg); });
 
+        // ms1
+        ms_bedroom_sub = create_subscription<std_msgs::msg::Bool>(
+                "/sensors_motion_bedroom", 10,
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { MSBedroomCallback(msg); });
+        // ms2
+        ms_corr_sub = create_subscription<std_msgs::msg::Bool>(
+                "/sensors_motion_corridor", 10,
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { MSCorridorCallback(msg); });
+
+
 
         // todo:  s should be h but for lab testing
         k_label_H = create_subscription<std_msgs::msg::Int32>(
@@ -205,6 +221,20 @@ public:
 
 
 
+    }
+
+    void MSBedroomCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
+        ms_bedroom = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
+        std::cout << "ms_bedroom ->open;" << ms_bedroom << std::endl;
+    }
+
+    void MSCorridorCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
+        std::cout << " ######################################################" << std::endl;
+        ms_corridor = msg->data;
+        std::cout << "msg->open;" << msg->data << std::endl;
+        std::cout << "ms_corridor ->open;" << ms_corridor << std::endl;
     }
 
     void k_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
@@ -301,7 +331,27 @@ public:
         return {door_bedroom, door_bathroom, door_outdoor};
     }
 
-    Observation getObservation() {
+    Observation getObservation(ParticleFilter& particle_filter) {
+
+        // check which state the person is in
+        // state1: h face recognized take the reading
+        // if previously the person was out or bedroom or unseen
+        // disperse the particles so that particle would show up in the needed area
+
+//        particle_filter.particles = particle_filter.initial_part_dist;
+
+        // state2: h left to bedroom or outside
+        // we shouldnt take the reading unless his face was recognized that he is back
+
+        // state 3 h was recognized in the house but
+        // state 3.1 person is still visible by the camera but tarcked skeleton was dropped
+        // indicated by observations near h location but no label
+
+        //state 3.2 person went into nonvisible area like atelier or kitchen
+        // indicate by dispersed particles
+        // TODO: test with two wait for face recog or
+        // SOL: doesnt matter cause we living only one place
+
 
         // Prioritize any observation where is_person_h is true
         if (observation_kitchen.des_pers) return observation_kitchen;

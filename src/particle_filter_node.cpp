@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
             std::cout << "door_status_ close: " << door_status_[2] << std::endl;
             // Initialize the particle filter in a uniform distribution
 
-            obs_ = node->getObservation();
+            obs_ = node->getObservation(particle_filter);
             first_obs = node->first_obs;
 
             // for debug

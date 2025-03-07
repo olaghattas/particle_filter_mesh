@@ -46,7 +46,7 @@ private:
 
     // Vector of weights of all particles
     std::vector<double> weights;
-    std::vector<Particle> initial_part_dist;
+
     TransitionMeshHandler transition_mesh_handler;
     bool monitoring_flag = false;
     bool obs_during_monitoring = false;
@@ -57,6 +57,7 @@ private:
 //    std::mt19937 gen;
 
 public:
+    std::vector<Particle> initial_part_dist;
     double patient_x = std::nan("");
     double patient_y = std::nan("");
 
