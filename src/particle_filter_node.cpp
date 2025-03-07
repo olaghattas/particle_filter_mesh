@@ -47,6 +47,8 @@
 #include <cstdlib>
 #include <particle_filter/particle_filter_node.hpp>
 
+// -> Used to access members when you have a pointer to an object.
+//. Used to access members (variables or methods) of an object when you have a direct instance of a class or struct.
 
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
@@ -94,7 +96,7 @@ int main(int argc, char **argv) {
             std::cout << "door_status_ close: " << door_status_[2] << std::endl;
             // Initialize the particle filter in a uniform distribution
 
-            obs_ = node->getObservation();
+            obs_ = node->getObservation(particle_filter);
             first_obs = node->first_obs;
 
             // for debug
