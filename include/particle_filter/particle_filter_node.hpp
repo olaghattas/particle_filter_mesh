@@ -40,6 +40,12 @@
 
 #include <cstdlib>
 
+//enum PersonState {
+//    UNSEEN,  // useen but person still at home
+//    BEDROOM,
+//    OUTDOOR,
+//    FACE_RECOGNIZED
+//};
 
 class ParticleFilterNode : public rclcpp::Node {
 private:
@@ -105,12 +111,10 @@ private:
 
 
 
-
-
-
 public:
+    PersonState currentStateH;
     bool first_obs = false;
-    ParticleFilterNode() : rclcpp::Node("particle_filter") {
+    ParticleFilterNode() : rclcpp::Node("particle_filter"), currentStateH(UNSEEN)  {
 
 //        map_cam_aptag["doorway"] = "tag_" + std::string(std::getenv("tag_doorway")) + "_zed";
 //        map_cam_aptag["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen")) + "_zed";
@@ -175,10 +179,9 @@ public:
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { MSCorridorCallback(msg); });
 
 
-
         // todo:  s should be h but for lab testing
         k_label_H = create_subscription<std_msgs::msg::Int32>(
-                "/kitchen_s_label", 10,
+                "/kitchen_h_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_Callback(msg); });
 
 //        lv_label_H = create_subscription<std_msgs::msg::Int32>(
@@ -186,7 +189,7 @@ public:
 //                [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_Callback(msg); });
 
         lv_label_H = create_subscription<std_msgs::msg::Int32>(
-                "bedroom_s_label", 10,
+                "bedroom_h_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_Callback(msg); });
 
 
@@ -200,7 +203,7 @@ public:
 
 
         k_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/kitchen_h_label", 10,
+                "/kitchen_s_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_f_Callback(msg); });
 
 //        lv_label_F = create_subscription<std_msgs::msg::Int32>(
@@ -208,7 +211,7 @@ public:
 //                [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_f_Callback(msg); });
 
         lv_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/bedroom_h_label", 10,
+                "/bedroom_s_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_f_Callback(msg); });
 
         dw_label_F = create_subscription<std_msgs::msg::Int32>(
@@ -337,69 +340,168 @@ public:
         // state1: h face recognized take the reading
         // if previously the person was out or bedroom or unseen
         // disperse the particles so that particle would show up in the needed area
+        // actually when face is not recognized we should reintializa
 
-//        particle_filter.particles = particle_filter.initial_part_dist;
+        // check if person is detected
+        // if person state was unseen ten disperse particles so pf can pick it up
+        if (observation_kitchen.des_pers || observation_doorway.des_pers || observation_living.des_pers || observation_corridor.des_pers){
+            // we have an observation of h
+            //        if (currentStateH == OUTDOOR || currentStateH == BEDROOM ){
+            // check which one is better
+            first_obs = true;
+            if (currentStateH != FACE_RECOGNIZED ){
+                particle_filter.particles = particle_filter.initial_part_dist;
+            }
+            currentStateH = FACE_RECOGNIZED;
+            if (observation_kitchen.des_pers) {
+                std::cout << "observation_kitchen.des_pers" << observation_kitchen.des_pers << std::endl;
+                return observation_kitchen;
+            }
+            if (observation_doorway.des_pers) {
+                return observation_doorway;
+            }
+            if (observation_living.des_pers) {
+                std::cout << "observation_living.des_pers" << observation_living.des_pers << std::endl;
+                return observation_living;
+            }
+            if (observation_corridor.des_pers) {
+                return observation_corridor;
+            }
 
-        // state2: h left to bedroom or outside
-        // we shouldnt take the reading unless his face was recognized that he is back
-
-        // state 3 h was recognized in the house but
-        // state 3.1 person is still visible by the camera but tarcked skeleton was dropped
-        // indicated by observations near h location but no label
-
-        //state 3.2 person went into nonvisible area like atelier or kitchen
-        // indicate by dispersed particles
-        // TODO: test with two wait for face recog or
-        // SOL: doesnt matter cause we living only one place
-
-
-        // Prioritize any observation where is_person_h is true
-        if (observation_kitchen.des_pers) return observation_kitchen;
-        if (observation_doorway.des_pers) return observation_doorway;
-        if (observation_living.des_pers) return observation_living;
-        if (observation_corridor.des_pers) return observation_corridor;
+        }
 
         Observation selected_observation;
-        float distance_to_person = 100.0;
-        std::string name = "";
+        selected_observation.name = "";
 
-        if (observation_kitchen.name != "") {
-            distance_to_person = observation_kitchen.x;
-            std::cout << "observation in kitchen" << observation_kitchen.name << std::endl;
-            selected_observation = observation_kitchen;
+        double distance_to_prev_obs = std::numeric_limits<double>::infinity();
+        // state2: h left to bedroom or outside
+        // we shouldnt take the reading unless his face was recognized that he is back
+        if (currentStateH == OUTDOOR || currentStateH == BEDROOM ){
+            return selected_observation;
         }
 
-        if (observation_doorway.name != "") {
-            if (distance_to_person > observation_doorway.x) {
-                distance_to_person = observation_doorway.x;
+
+        // state 3 h is picked up but not recognized
+        // choose location closest ot prev obse
+        auto prev = particle_filter.previous_observation_;
+
+        // in map frame so i need to transform obs to map frame then use them
+//        if (!observation_doorway.name.empty() || !observation_kitchen.name.empty()  || !observation_living.name.empty()  || !observation_corridor.name.empty()) {
+            // there is an observation
+
+
+        if (!std::isnan(prev.first) && !std::isnan(prev.second)) {
+            // actually have first observation be recognized person
+            // first_obs = true;
+            Eigen::Vector4d TransformedPoint;
+            Eigen::Vector4d homogeneousPoint;
+            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams;
+
+            if (observation_doorway.name != "") {
+//                euclideanDistance(double x1, double y1, double x2, double y2)
+                // transform then get euclidean dist to prev
+                homogeneousPoint << observation_doorway.x, observation_doorway.y, observation_doorway.z, 1.0;
+                extrinsicParams = cameraextrinsics[observation_doorway.name];
+
+                TransformedPoint <<
+                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
+                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
+                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
+                                 extrinsicParams(0, 3) * homogeneousPoint[3],
+                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+
+                // no need check cause here dist is infinity
+                distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
+                                                         TransformedPoint[1]);
                 selected_observation = observation_doorway;
-            }
-            std::cout << "observation in doorway " << observation_doorway.name << std::endl;
-//            return observation = observation_doorway;
-        }
-        if (observation_living.name != "") {
-            if (distance_to_person > observation_living.x) {
-                distance_to_person = observation_living.x;
-                selected_observation = observation_living;
-                std::cout << "observation in living " << observation_doorway.name << std::endl;
+
             }
 
-        }
-        if (observation_corridor.name != "") {
-            if (distance_to_person > observation_corridor.x) {
-                distance_to_person = observation_corridor.x;
-                selected_observation = observation_corridor;
-                std::cout << "observation in corridor " << observation_doorway.name << std::endl;
+            if (observation_living.name != "") {
+
+                homogeneousPoint << observation_living.x, observation_living.y, observation_living.z, 1.0;
+
+                extrinsicParams = cameraextrinsics[observation_living.name];
+                TransformedPoint <<
+                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
+                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
+                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
+                                 extrinsicParams(0, 3) * homogeneousPoint[3],
+                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+
+                if (distance_to_prev_obs >
+                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
+                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
+                                                             TransformedPoint[1]);
+                    selected_observation = observation_living;
+                }
             }
 
+            if (observation_corridor.name != "") {
+                homogeneousPoint << observation_corridor.x, observation_corridor.y, observation_corridor.z, 1.0;
+
+                extrinsicParams = cameraextrinsics[observation_corridor.name];
+                TransformedPoint <<
+                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
+                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
+                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
+                                 extrinsicParams(0, 3) * homogeneousPoint[3],
+                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+                if (distance_to_prev_obs >
+                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
+                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
+                                                             TransformedPoint[1]);
+                    selected_observation = observation_corridor;
+                }
+            }
+
+            if (observation_kitchen.name != "") {
+                homogeneousPoint << observation_kitchen.x, observation_kitchen.y, observation_kitchen.z, 1.0;
+
+                extrinsicParams = cameraextrinsics[observation_kitchen.name];
+                TransformedPoint <<
+                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
+                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
+                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
+                                 extrinsicParams(0, 3) * homogeneousPoint[3],
+                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+                if (distance_to_prev_obs >
+                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
+                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
+                                                             TransformedPoint[1]);
+                    selected_observation = observation_kitchen;
+                }
+            }
         }
 
-        if (distance_to_person == 100.0) {
-            selected_observation.name = "";
-        }else{
-            first_obs = true;
+
+//        }
+
+        if (selected_observation.name.empty()){
+
+            currentStateH = UNSEEN;
         }
-//        std::cout << "observation closest in " << observation.name << std::endl;
+
         return selected_observation;
 
     }
@@ -423,6 +525,8 @@ public:
     void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, int &label_f, Observation& obs) {
         std::cout << " ************** PosePixCallback in " << location << std::endl;
 
+        std::cout << " ************** label_h  " << label_h << std::endl;
+        std::cout << " ************** label_f  " << label_f << std::endl;
         // Reset observation
         obs.name = "";
         obs.des_pers = false;  // Flag to indicate if it's person h
@@ -447,7 +551,10 @@ public:
         for (std::vector<zed_interfaces::msg::Object>::size_type ind = 0; ind < msg->objects.size(); ++ind) {
             const auto &obj = msg->objects[ind];
 
+            std::cout << " ************** obj.label_id  " << obj.label_id << std::endl;
             if (obj.label_id == label_f) {
+                std::cout << " ************** obj.label_id  = label_f  " << std::endl;
+
                 found_person_f = true;
                 continue;  // Skip Florence objects
             }
@@ -460,6 +567,8 @@ public:
 
             // Store the first valid object (not f or h)
             if (!found_valid_person) {
+                std::cout << " **************  valid perosn obj.label_id  " << obj.label_id << std::endl;
+
                 fallback_ind = ind;
                 found_valid_person = true;
             }
@@ -479,6 +588,71 @@ public:
         }
     }
 
+    // for testing to have my face be h
+//    void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, int &label_f, Observation& obs) {
+//        std::cout << " ************** PosePixCallback in " << location << std::endl;
+//
+//        std::cout << " ************** label_h  " << label_h << std::endl;
+//        std::cout << " ************** label_f  " << label_f << std::endl;
+//        // Reset observation
+//        obs.name = "";
+//        obs.des_pers = false;  // Flag to indicate if it's person h
+//
+//        if (msg->objects.empty()) {
+//            return;  // No objects to process
+//        }
+//
+//        // Initially assume no valid observation
+//        bool found_person_h = false;
+//        bool found_person_f = false;
+//        bool found_valid_person = false;
+//        std::vector<zed_interfaces::msg::Object>::size_type fallback_ind = -1;  // Index of the first valid object
+//
+//        // If both labels are empty, take the first observation
+//        if (label_h == -1 && label_f == -1) {
+//            SetObservation(msg->objects[0], false, location, obs);
+//            return;
+//        }
+//
+//        // Process objects to find person h or a valid object
+//        for (std::vector<zed_interfaces::msg::Object>::size_type ind = 0; ind < msg->objects.size(); ++ind) {
+//            const auto &obj = msg->objects[ind];
+//
+//            std::cout << " ************** obj.label_id  " << obj.label_id << std::endl;
+//            if (obj.label_id == label_h) {
+//                std::cout << " ************** obj.label_id  = label_f  " << std::endl;
+//                found_person_h = true;
+//                continue;  // Skip Florence objects
+//            }
+//
+//            if (obj.label_id == label_f) {
+//                found_person_f = true;
+//                SetObservation(obj, true, location, obs);  // It's person h
+//                return;  // Person H found, no need to check further
+//            }
+//
+//            // Store the first valid object (not f or h)
+//            if (!found_valid_person) {
+//                std::cout << " **************  valid perosn obj.label_id  " << obj.label_id << std::endl;
+//
+//                fallback_ind = ind;
+//                found_valid_person = true;
+//            }
+//        }
+//
+//        // Handle cases where person h or f wasn't found
+//        if (label_f != -1) {
+//            label_h = -1;  // Label h is no longer valid
+//        }
+//        if (label_h != -1 && !found_person_h) {
+//            label_f = -1;  // Label f is no longer valid
+//        }
+//
+//        // If person h was not found, fallback to the first valid object
+//        if (found_valid_person) {
+//            SetObservation(msg->objects[fallback_ind], false, location, obs);  // Not person h
+//        }
+//    }
 // Function to set the observation based on whether it's person h or not
     void SetObservation(const zed_interfaces::msg::Object &obj, bool is_person_h, const std::string &location_name, Observation &obs) {
         obs.name = location_name;

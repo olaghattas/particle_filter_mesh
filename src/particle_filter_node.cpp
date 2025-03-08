@@ -107,8 +107,8 @@ int main(int argc, char **argv) {
                 /// should be whatever the code is expecting the name to be
                 t.child_frame_id = "nathan";
 
-                particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
-                node->publish_particles(particle_filter.particles);
+                particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name, node->currentStateH);
+//                node->publish_particles(particle_filter.particles);
 
                 if (obs_.name.empty()) {
                     //observation empty
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
 //                    if (Neff < (particle_filter.num_particles) / 3) {
                     std::cout << " resample  " << std::endl;
 
-                    node->publish_particles(particle_filter.particles);
+//                    node->publish_particles(particle_filter.particles);
                     particle_filter.resample();
                     particle_filter.check_unique_particles();
                     node->publish_particles(particle_filter.particles);
