@@ -73,6 +73,7 @@ int main(int argc, char **argv) {
     double velocity = 0.01;
     double yaw_rate = 0.5;
     std::vector<bool> door_status_;
+    std::vector<bool> ms_status_;
     double sigma_landmark[3] = {0.04, 0.04, 0.04};
 
     particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
@@ -89,6 +90,7 @@ int main(int argc, char **argv) {
         } else {
 
             door_status_ = node->getdoorstatus();
+            ms_status_ = node->getmsstatus();
 
             std::cout << "{door_bedroom, door_bathroom, door_outdoor};" << std::endl;
             std::cout << "door_status_ close: " << door_status_[2] << std::endl;
@@ -107,7 +109,7 @@ int main(int argc, char **argv) {
                 /// should be whatever the code is expecting the name to be
                 t.child_frame_id = "nathan";
 
-                particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name, node->currentStateH);
+                particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name, node->currentStateH, ms_status_);
 //                node->publish_particles(particle_filter.particles);
 
                 if (obs_.name.empty()) {

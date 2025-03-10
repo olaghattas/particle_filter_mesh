@@ -334,6 +334,16 @@ public:
         return {door_bedroom, door_bathroom, door_outdoor};
     }
 
+    std::vector<bool> getmsstatus() {
+        // TRUE for closed and False for open
+        // should align with patrticle filter enforce collision landmarks orderc
+//        bedroom_door, bathroom_door, living_room_door, outside_door
+        return {ms_bedroom, ms_corridor};
+    }
+
+
+
+
     Observation getObservation(ParticleFilter& particle_filter) {
 
         // check which state the person is in
@@ -390,112 +400,110 @@ public:
             // there is an observation
 
 
-        if (!std::isnan(prev.first) && !std::isnan(prev.second)) {
-            // actually have first observation be recognized person
-            // first_obs = true;
-            Eigen::Vector4d TransformedPoint;
-            Eigen::Vector4d homogeneousPoint;
-            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams;
-
-            if (observation_doorway.name != "") {
-//                euclideanDistance(double x1, double y1, double x2, double y2)
-                // transform then get euclidean dist to prev
-                homogeneousPoint << observation_doorway.x, observation_doorway.y, observation_doorway.z, 1.0;
-                extrinsicParams = cameraextrinsics[observation_doorway.name];
-
-                TransformedPoint <<
-                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
-                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
-                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
-                                 extrinsicParams(0, 3) * homogeneousPoint[3],
-                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-
-                // no need check cause here dist is infinity
-                distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
-                                                         TransformedPoint[1]);
-                selected_observation = observation_doorway;
-
-            }
-
-            if (observation_living.name != "") {
-
-                homogeneousPoint << observation_living.x, observation_living.y, observation_living.z, 1.0;
-
-                extrinsicParams = cameraextrinsics[observation_living.name];
-                TransformedPoint <<
-                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
-                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
-                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
-                                 extrinsicParams(0, 3) * homogeneousPoint[3],
-                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-
-                if (distance_to_prev_obs >
-                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
-                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
-                                                             TransformedPoint[1]);
-                    selected_observation = observation_living;
-                }
-            }
-
-            if (observation_corridor.name != "") {
-                homogeneousPoint << observation_corridor.x, observation_corridor.y, observation_corridor.z, 1.0;
-
-                extrinsicParams = cameraextrinsics[observation_corridor.name];
-                TransformedPoint <<
-                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
-                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
-                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
-                                 extrinsicParams(0, 3) * homogeneousPoint[3],
-                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-                if (distance_to_prev_obs >
-                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
-                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
-                                                             TransformedPoint[1]);
-                    selected_observation = observation_corridor;
-                }
-            }
-
-            if (observation_kitchen.name != "") {
-                homogeneousPoint << observation_kitchen.x, observation_kitchen.y, observation_kitchen.z, 1.0;
-
-                extrinsicParams = cameraextrinsics[observation_kitchen.name];
-                TransformedPoint <<
-                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
-                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
-                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
-                                 extrinsicParams(0, 3) * homogeneousPoint[3],
-                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-                if (distance_to_prev_obs >
-                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
-                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
-                                                             TransformedPoint[1]);
-                    selected_observation = observation_kitchen;
-                }
-            }
-        }
-
-
+//        if (!std::isnan(prev.first) && !std::isnan(prev.second)) {
+//            // actually have first observation be recognized person
+//            // first_obs = true;
+//            Eigen::Vector4d TransformedPoint;
+//            Eigen::Vector4d homogeneousPoint;
+//            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams;
+//
+//            if (observation_doorway.name != "") {
+////                euclideanDistance(double x1, double y1, double x2, double y2)
+//                // transform then get euclidean dist to prev
+//                homogeneousPoint << observation_doorway.x, observation_doorway.y, observation_doorway.z, 1.0;
+//                extrinsicParams = cameraextrinsics[observation_doorway.name];
+//
+//                TransformedPoint <<
+//                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
+//                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
+//                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
+//                                 extrinsicParams(0, 3) * homogeneousPoint[3],
+//                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+//                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+//                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+//
+//                // no need check cause here dist is infinity
+//                distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
+//                                                         TransformedPoint[1]);
+//                selected_observation = observation_doorway;
+//
+//            }
+//
+//            if (observation_living.name != "") {
+//
+//                homogeneousPoint << observation_living.x, observation_living.y, observation_living.z, 1.0;
+//
+//                extrinsicParams = cameraextrinsics[observation_living.name];
+//                TransformedPoint <<
+//                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
+//                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
+//                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
+//                                 extrinsicParams(0, 3) * homogeneousPoint[3],
+//                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+//                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+//                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+//
+//                if (distance_to_prev_obs >
+//                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
+//                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
+//                                                             TransformedPoint[1]);
+//                    selected_observation = observation_living;
+//                }
+//            }
+//
+//            if (observation_corridor.name != "") {
+//                homogeneousPoint << observation_corridor.x, observation_corridor.y, observation_corridor.z, 1.0;
+//
+//                extrinsicParams = cameraextrinsics[observation_corridor.name];
+//                TransformedPoint <<
+//                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
+//                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
+//                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
+//                                 extrinsicParams(0, 3) * homogeneousPoint[3],
+//                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+//                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+//                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+//                if (distance_to_prev_obs >
+//                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
+//                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
+//                                                             TransformedPoint[1]);
+//                    selected_observation = observation_corridor;
+//                }
+//            }
+//
+//            if (observation_kitchen.name != "") {
+//                homogeneousPoint << observation_kitchen.x, observation_kitchen.y, observation_kitchen.z, 1.0;
+//
+//                extrinsicParams = cameraextrinsics[observation_kitchen.name];
+//                TransformedPoint <<
+//                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
+//                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
+//                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
+//                                 extrinsicParams(0, 3) * homogeneousPoint[3],
+//                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
+//                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
+//                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
+//                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
+//                if (distance_to_prev_obs >
+//                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
+//                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
+//                                                             TransformedPoint[1]);
+//                    selected_observation = observation_kitchen;
+//                }
+//            }
 //        }
+
 
         if (selected_observation.name.empty()){
 

@@ -324,7 +324,7 @@ void ParticleFilter::particles_in_range(std::pair<double, double> x_bound, std::
 //}
 
 void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
-                                       const std::vector<bool> &doors_status, const std::string &observation, PersonState& person_state) {
+                                       const std::vector<bool> &doors_status, const std::string &observation, PersonState& person_state, const std::vector<bool> &ms_status) {
 
     std::normal_distribution<double> xNoise(0, 0.25);
     std::normal_distribution<double> yNoise(0, 0.25);
@@ -356,7 +356,7 @@ void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> st
 
     enforce_non_collision(particles_before, doors_status, observation);
     // check for speacial cases
-    special_transitions(doors_status, person_state);
+    special_transitions(doors_status, person_state, ms_status);
 }
 
 // Function to calculate Neff
@@ -805,7 +805,7 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
     }
 }
 
-void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, PersonState & person_state){
+void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, PersonState & person_state, const std::vector<bool> &ms_status){
     std::cout << "Entering special_transitions function." << std::endl;
 
     if (isnan(patient_x) && isnan(patient_y)){
@@ -830,6 +830,8 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
         int door_index = transition_mesh_handler.aoi_to_door[monitoring];
         door_of_int_open = !doors_status[door_index];
         std::cout << "Door status: " << door_of_int_open << std::endl;
+        int ms_index = transition_mesh_handler.aoi_to_ms[monitoring];
+        ms_of_int_triggered = doors_status[ms_index];
 
         if (obs_during_monitoring) {
             std::cout << "Observation detected during monitoring." << std::endl;
@@ -850,21 +852,21 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
             obs_during_monitoring = false;
         }
 
+
+//         1) try without the if no_obs_during_monitoring for outside and motion for bedroom
+        //trigger transition with door
         if (no_obs_during_monitoring){
             std::cout << "No observations detected during monitoring." << std::endl;
 
-            if (door_of_int_open) {
+            // since person doesnt keep main door open then we can assume that the open it when
+            // they want to go out
+            // this is not the case for bedroom where it can be open so we are going to use motion sensor to trigger
+            if (door_of_int_open && monitoring == "indoor") {
                 std::cout << "Door opened during monitoring. Assuming person has left." << std::endl;
                 std::cout << "Sampling particles in destination area." << std::endl;
 
                 transition_mesh_handler.sample_in_bounds(monitoring, particles);
-                if ( monitoring == "indoor" ){
-                    person_state = OUTDOOR;
-                }
-
-                if (monitoring == "corridor" ){
-                    person_state = BEDROOM;
-                }
+                person_state = OUTDOOR;
 
                 monitoring_flag = false;
                 obs_during_monitoring = false;
@@ -873,6 +875,17 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
                 door_of_int_open = false;
                 return;
             }
+            if ( ms_of_int_triggered && monitoring == "corridor" ){
+                transition_mesh_handler.sample_in_bounds(monitoring, particles);
+                person_state = BEDROOM;
+
+                monitoring_flag = false;
+                obs_during_monitoring = false;
+                no_obs_during_monitoring = false;
+                monitoring = "";
+                door_of_int_open = false;
+                return;
+                }
 
             no_obs_during_monitoring = false;
         }

@@ -59,6 +59,7 @@ private:
     bool obs_during_monitoring = false;
     bool no_obs_during_monitoring = false;
     bool door_of_int_open = false;
+    bool ms_of_int_triggered = false;
     // Random number generator
 //    std::random_device rd;
 //    std::mt19937 gen;
@@ -117,7 +118,7 @@ public:
 //                      std::vector<bool> doors_status, std::string observation);
 
     void motion_model_noisy(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
-                            const std::vector<bool> &doors_status, const std::string &observation, PersonState& person_state);
+                            const std::vector<bool> &doors_status, const std::string &observation, PersonState& person_state, const std::vector<bool> &ms_status);
 
 //    void updateWeights(double std_landmark[],
 //                       std::vector<Observation> observations,
@@ -153,7 +154,8 @@ public:
     void particles_in_range(std::pair<double, double> x_bound, std::pair<double, double> y_bound, int ind_start);
 //    void special_transitions(std::vector<bool> doors_status);
 
-    void special_transitions(const std::vector<bool> &doors_status, PersonState & person_state);
+    void special_transitions(const std::vector<bool> &doors_status, PersonState & person_state, const std::vector<bool> &ms_status);
+
 
     };
 

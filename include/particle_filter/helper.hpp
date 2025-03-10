@@ -53,6 +53,8 @@ public:
     std::unordered_map<std::string, std::vector<float>> mesh_vert_map_;
     // map door status index to aoi
     std::unordered_map<std::string, int> aoi_to_door = {{"indoor", 2}, {"corridor", 0}};
+    std::unordered_map<std::string, int> aoi_to_ms = { {"indoor", 1},{"corridor", 0}};
+
     std::string get_dest(std::string aoi);
 };
 
