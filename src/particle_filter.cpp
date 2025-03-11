@@ -25,7 +25,7 @@ void ParticleFilter::check_unique_particles() {
         unique_positions.insert({p.x, p.y});
     }
 
-    std::cout << "Unique particles: " << unique_positions.size() << " out of " << num_particles << std::endl;
+//    std::cout << "Unique particles: " << unique_positions.size() << " out of " << num_particles << std::endl;
 
     if (unique_positions.size() < num_particles * 0.5) { // Less than 50% unique
         std::cout << "Warning: Particles have lost diversity!" << std::endl;
@@ -87,7 +87,7 @@ std::string ParticleFilter::find_landmark_with_most_particles() {
         return max_landmark_it->first;
     } else {
         // Handle the case where no landmarks are found
-        std::cout << "NO LANDMARK" << std::endl;
+//        std::cout << "NO LANDMARK" << std::endl;
         return "";
     }
 }
@@ -809,42 +809,42 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
     std::cout << "Entering special_transitions function." << std::endl;
 
     if (isnan(patient_x) && isnan(patient_y)){
-        std::cout << "Patient position is NaN, exiting function." << std::endl;
+//        std::cout << "Patient position is NaN, exiting function." << std::endl;
         return;
     }
 
-    std::cout << "Checking if person is in a special designated area..." << std::endl;
+//    std::cout << "Checking if person is in a special designated area..." << std::endl;
 
     if (monitoring.empty()){
-        std::cout << "Person not currently being monitored. Checking special locations..." << std::endl;
+//        std::cout << "Person not currently being monitored. Checking special locations..." << std::endl;
         monitoring = transition_mesh_handler.monitor_lndmark(patient_x, patient_y);
         if (!monitoring.empty()) {
-            std::cout << "Person entered special monitoring area: " << monitoring << std::endl;
+//            std::cout << "Person entered special monitoring area: " << monitoring << std::endl;
         }
     }
 
     if (!monitoring.empty()){
         monitoring_flag = true;
-        std::cout << "Person is in a special area: " << monitoring << std::endl;
+//        std::cout << "Person is in a special area: " << monitoring << std::endl;
 
         int door_index = transition_mesh_handler.aoi_to_door[monitoring];
         door_of_int_open = !doors_status[door_index];
-        std::cout << "Door status: " << door_of_int_open << std::endl;
+//        std::cout << "Door status: " << door_of_int_open << std::endl;
         int ms_index = transition_mesh_handler.aoi_to_ms[monitoring];
         ms_of_int_triggered = doors_status[ms_index];
 
         if (obs_during_monitoring) {
-            std::cout << "Observation detected during monitoring." << std::endl;
+//            std::cout << "Observation detected during monitoring." << std::endl;
 
             if (!transition_mesh_handler.check_person_at_loc(monitoring, patient_x, patient_y)){
-                std::cout << "Person left special area, exiting monitoring." << std::endl;
+//                std::cout << "Person left special area, exiting monitoring." << std::endl;
                 monitoring_flag = false;
                 obs_during_monitoring = false;
                 no_obs_during_monitoring = false;
                 monitoring = "";
                 door_of_int_open = false;
 
-                std::cout << "Resetting particles to initial distribution." << std::endl;
+//                std::cout << "Resetting particles to initial distribution." << std::endl;
                 particles = initial_part_dist;
                 return;
             }
@@ -855,15 +855,15 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
 
 //         1) try without the if no_obs_during_monitoring for outside and motion for bedroom
         //trigger transition with door
-        if (no_obs_during_monitoring){
-            std::cout << "No observations detected during monitoring." << std::endl;
+//        if (no_obs_during_monitoring){
+//            std::cout << "No observations detected during monitoring." << std::endl;
 
             // since person doesnt keep main door open then we can assume that the open it when
             // they want to go out
             // this is not the case for bedroom where it can be open so we are going to use motion sensor to trigger
             if (door_of_int_open && monitoring == "indoor") {
-                std::cout << "Door opened during monitoring. Assuming person has left." << std::endl;
-                std::cout << "Sampling particles in destination area." << std::endl;
+//                std::cout << "Door opened during monitoring. Assuming person has left." << std::endl;
+//                std::cout << "Sampling particles in destination area." << std::endl;
 
                 transition_mesh_handler.sample_in_bounds(monitoring, particles);
                 person_state = OUTDOOR;
@@ -887,8 +887,8 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
                 return;
                 }
 
-            no_obs_during_monitoring = false;
-        }
+//            no_obs_during_monitoring = false;
+//        }
     }
 
     std::cout << "Exiting special_transitions function." << std::endl;

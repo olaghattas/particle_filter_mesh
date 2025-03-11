@@ -227,104 +227,107 @@ public:
     }
 
     void MSBedroomCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         ms_bedroom = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "ms_bedroom ->open;" << ms_bedroom << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "ms_bedroom ->open;" << ms_bedroom << std::endl;
     }
 
     void MSCorridorCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         ms_corridor = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "ms_corridor ->open;" << ms_corridor << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "ms_corridor ->open;" << ms_corridor << std::endl;
     }
 
     void k_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         k_label_h = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "k_label_h " << k_label_h << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "k_label_h " << k_label_h << std::endl;
     }
 
     void lv_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         lv_label_h = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "lv_label_h " << lv_label_h << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "lv_label_h " << lv_label_h << std::endl;
     }
 
     void dw_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         dw_label_h = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "dw_label_h " << dw_label_h << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "dw_label_h " << dw_label_h << std::endl;
     }
 
     void cor_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         coor_label_h = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "coor_label_h " << coor_label_h << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "coor_label_h " << coor_label_h << std::endl;
     }
 
     void k_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         k_label_f = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "k_label_h " << k_label_f << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "k_label_h " << k_label_f << std::endl;
     }
 
     void lv_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         lv_label_f = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "lv_label_f " << lv_label_f << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "lv_label_f " << lv_label_f << std::endl;
     }
 
     void dw_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         dw_label_f = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "dw_label_f " << dw_label_f << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "dw_label_f " << dw_label_f << std::endl;
     }
 
     void cor_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         coor_label_f = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "coor_label_f " << coor_label_f << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "coor_label_f " << coor_label_f << std::endl;
     }
 
     // save coordinate map
     // need to change, these are ricks
     const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
-            {"living_room", {0.85, -0.31, 0.0}},  // x, y, z coordinates
-            {"bedroom",     {-5.1, -1.2,  0.0}},
-            {"outside",     {6,    -0.7,  0.0}},
+            {"living_room", {-0.5, 0.0, 0.0}},  // x, y, z coordinates
+            {"bedroom",     {-5.1, -1.7,  0.0}},
+            {"outside",     {6, -0.7,  0.0}},
+            {"dining_room", {1.5, 0.0, 0.0}},  // x, y, z coordinates
+            {"kitchen",     {4, 0,  0.0}},
+            {"bathroom",     {-4,    0.0,  0.0}},
     };
 
     std::array<double, 4> sigma_pos;
 
     void DoorOutdoorCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
-        std::cout << " ######################################################" << std::endl;
+//        std::cout << " ######################################################" << std::endl;
         door_outdoor = msg->data;
-        std::cout << "msg->open;" << msg->data << std::endl;
-        std::cout << "doorstats->open;" << door_outdoor << std::endl;
+//        std::cout << "msg->open;" << msg->data << std::endl;
+//        std::cout << "doorstats->open;" << door_outdoor << std::endl;
     }
 
     void DoorBedroomCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
-        std::cout << "********************************" << std::endl;
+//        std::cout << "********************************" << std::endl;
         door_bedroom = msg->data;
-        std::cout << "bedroom msg->open;" << msg->data << std::endl;
-        std::cout << "bedoroom doorstats->open;" << door_bedroom << std::endl;
+//        std::cout << "bedroom msg->open;" << msg->data << std::endl;
+//        std::cout << "bedoroom doorstats->open;" << door_bedroom << std::endl;
     }
 
     void DoorBathroomCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
-        std::cout << "9999999999999999999999999999999999999" << std::endl;
+//        std::cout << "9999999999999999999999999999999999999" << std::endl;
         door_bathroom = msg->data;
-        std::cout << "bsth msg->open;" << msg->data << std::endl;
-        std::cout << "bedbathoroom doorstats->open;" << door_bathroom << std::endl;
+//        std::cout << "bsth msg->open;" << msg->data << std::endl;
+//        std::cout << "bedbathoroom doorstats->open;" << door_bathroom << std::endl;
     }
 
     std::vector<bool> getdoorstatus() {
@@ -340,7 +343,6 @@ public:
 //        bedroom_door, bathroom_door, living_room_door, outside_door
         return {ms_bedroom, ms_corridor};
     }
-
 
 
 
@@ -393,7 +395,7 @@ public:
 
         // state 3 h is picked up but not recognized
         // choose location closest ot prev obse
-        auto prev = particle_filter.previous_observation_;
+//        auto prev = particle_filter.previous_observation_;
 
         // in map frame so i need to transform obs to map frame then use them
 //        if (!observation_doorway.name.empty() || !observation_kitchen.name.empty()  || !observation_living.name.empty()  || !observation_corridor.name.empty()) {
@@ -531,10 +533,10 @@ public:
     }
 
     void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, int &label_f, Observation& obs) {
-        std::cout << " ************** PosePixCallback in " << location << std::endl;
-
-        std::cout << " ************** label_h  " << label_h << std::endl;
-        std::cout << " ************** label_f  " << label_f << std::endl;
+//        std::cout << " ************** PosePixCallback in " << location << std::endl;
+//
+//        std::cout << " ************** label_h  " << label_h << std::endl;
+//        std::cout << " ************** label_f  " << label_f << std::endl;
         // Reset observation
         obs.name = "";
         obs.des_pers = false;  // Flag to indicate if it's person h
@@ -559,9 +561,9 @@ public:
         for (std::vector<zed_interfaces::msg::Object>::size_type ind = 0; ind < msg->objects.size(); ++ind) {
             const auto &obj = msg->objects[ind];
 
-            std::cout << " ************** obj.label_id  " << obj.label_id << std::endl;
+//            std::cout << " ************** obj.label_id  " << obj.label_id << std::endl;
             if (obj.label_id == label_f) {
-                std::cout << " ************** obj.label_id  = label_f  " << std::endl;
+//                std::cout << " ************** obj.label_id  = label_f  " << std::endl;
 
                 found_person_f = true;
                 continue;  // Skip Florence objects
@@ -575,7 +577,7 @@ public:
 
             // Store the first valid object (not f or h)
             if (!found_valid_person) {
-                std::cout << " **************  valid perosn obj.label_id  " << obj.label_id << std::endl;
+//                std::cout << " **************  valid perosn obj.label_id  " << obj.label_id << std::endl;
 
                 fallback_ind = ind;
                 found_valid_person = true;
@@ -596,71 +598,7 @@ public:
         }
     }
 
-    // for testing to have my face be h
-//    void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, int &label_f, Observation& obs) {
-//        std::cout << " ************** PosePixCallback in " << location << std::endl;
-//
-//        std::cout << " ************** label_h  " << label_h << std::endl;
-//        std::cout << " ************** label_f  " << label_f << std::endl;
-//        // Reset observation
-//        obs.name = "";
-//        obs.des_pers = false;  // Flag to indicate if it's person h
-//
-//        if (msg->objects.empty()) {
-//            return;  // No objects to process
-//        }
-//
-//        // Initially assume no valid observation
-//        bool found_person_h = false;
-//        bool found_person_f = false;
-//        bool found_valid_person = false;
-//        std::vector<zed_interfaces::msg::Object>::size_type fallback_ind = -1;  // Index of the first valid object
-//
-//        // If both labels are empty, take the first observation
-//        if (label_h == -1 && label_f == -1) {
-//            SetObservation(msg->objects[0], false, location, obs);
-//            return;
-//        }
-//
-//        // Process objects to find person h or a valid object
-//        for (std::vector<zed_interfaces::msg::Object>::size_type ind = 0; ind < msg->objects.size(); ++ind) {
-//            const auto &obj = msg->objects[ind];
-//
-//            std::cout << " ************** obj.label_id  " << obj.label_id << std::endl;
-//            if (obj.label_id == label_h) {
-//                std::cout << " ************** obj.label_id  = label_f  " << std::endl;
-//                found_person_h = true;
-//                continue;  // Skip Florence objects
-//            }
-//
-//            if (obj.label_id == label_f) {
-//                found_person_f = true;
-//                SetObservation(obj, true, location, obs);  // It's person h
-//                return;  // Person H found, no need to check further
-//            }
-//
-//            // Store the first valid object (not f or h)
-//            if (!found_valid_person) {
-//                std::cout << " **************  valid perosn obj.label_id  " << obj.label_id << std::endl;
-//
-//                fallback_ind = ind;
-//                found_valid_person = true;
-//            }
-//        }
-//
-//        // Handle cases where person h or f wasn't found
-//        if (label_f != -1) {
-//            label_h = -1;  // Label h is no longer valid
-//        }
-//        if (label_h != -1 && !found_person_h) {
-//            label_f = -1;  // Label f is no longer valid
-//        }
-//
-//        // If person h was not found, fallback to the first valid object
-//        if (found_valid_person) {
-//            SetObservation(msg->objects[fallback_ind], false, location, obs);  // Not person h
-//        }
-//    }
+
 // Function to set the observation based on whether it's person h or not
     void SetObservation(const zed_interfaces::msg::Object &obj, bool is_person_h, const std::string &location_name, Observation &obs) {
         obs.name = location_name;

@@ -92,8 +92,8 @@ int main(int argc, char **argv) {
             door_status_ = node->getdoorstatus();
             ms_status_ = node->getmsstatus();
 
-            std::cout << "{door_bedroom, door_bathroom, door_outdoor};" << std::endl;
-            std::cout << "door_status_ close: " << door_status_[2] << std::endl;
+//            std::cout << "{door_bedroom, door_bathroom, door_outdoor};" << std::endl;
+//            std::cout << "door_status_ close: " << door_status_[2] << std::endl;
             // Initialize the particle filter in a uniform distribution
 
             obs_ = node->getObservation(particle_filter);
@@ -137,11 +137,11 @@ int main(int argc, char **argv) {
 
 //                  publish location  in the location with the most particles
                     auto it = node->coordinate_map.find(particle_filter.max_particles_loc);
-                    std::cout << "max_loc _ " << particle_filter.max_particles_loc << std::endl;
+//                    std::cout << "max_loc _ " << particle_filter.max_particles_loc << std::endl;
 
                     if (it != node->coordinate_map.end()) {
-                        double x = std::get<0>(it->second); ;
-                        double y = std::get<1>(it->second);;
+                        double x = std::get<0>(it->second);
+                        double y = std::get<1>(it->second);
                         t.transform.translation.x = x;
                         t.transform.translation.y = y;
                         t.transform.translation.z = std::get<2>(it->second);
@@ -217,10 +217,15 @@ int main(int argc, char **argv) {
 
                 }
 
+                std::cout << "t.transform.translation.x: " << t.transform.translation.x << std::endl;
+                std::cout << "t.transform.translation.y: " << t.transform.translation.y << std::endl;
+
 
 //                node->publish_particles(particle_filter.particles);
                 t.header.stamp = rclcpp::Clock().now();
                 tf_broadcaster_->sendTransform(t);
+                std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%% " << std::endl;
+                std::cout << "  TRANSFORM &*777 " << std::endl;
                 //observation camera
             }
 

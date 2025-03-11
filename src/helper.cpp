@@ -127,7 +127,7 @@ void TransitionMeshHandler::sample_in_bounds(const std::string& monitored_area, 
     std::mt19937 gen(rd()); // Random number generator
     std::uniform_real_distribution<float> dist_x(bounds_dest[0], bounds_dest[1]);
     std::uniform_real_distribution<float> dist_y(bounds_dest[2], bounds_dest[3]);
-    std::cout << "GEN: " << std::endl;
+//    std::cout << "GEN: " << std::endl;
 
     for (auto &p: particles) {
         // Generate random values within the bounds
