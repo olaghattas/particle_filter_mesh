@@ -84,6 +84,7 @@ std::string ParticleFilter::find_landmark_with_most_particles() {
                                             });
 
     if (max_landmark_it != particle_count.end()) {
+//        std::cout << "LANDMARK: "  << max_landmark_it->first << std::endl;
         return max_landmark_it->first;
     } else {
         // Handle the case where no landmarks are found
@@ -140,9 +141,18 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
     weights.clear();
 
 
-    // used write_to_file function ot save the distribution of the particles and used it to initialize
+   // need to generate the initial distribution
+   // TODO: add a bool
+//    for (int i = 0; i < num_particles; ++i) {
+//        Particle p = {i, xNoise(gen), yNoise(gen), zNoise(gen), yawNoise(gen), 1.0};
+//        particles.push_back(p);
+//        weights.push_back(1);
+//
+//    }
+
+    // used write_to_file function to save the distribution of the particles and used it to initialize
     // this ensures better coverage and easier to be done
-    std::string filename = (pkg_dir / "config" / "initial_dist.txt").string();
+    std::string filename = (pkg_dir / "config" / "initial_dist_exeter.txt").string();
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Error: Unable to open file " << filename << std::endl;
@@ -176,14 +186,14 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
     }
 
     file.close();
+
     normalize_weights(std::nan(""));
     initial_part_dist = particles;
 //    write_to_file("first_run.txt");
     is_initialized = true;
 
 
-
-    auto mesh_file = (pkg_dir / "config" / "olson_collision_mesh.obj").string();
+    auto mesh_file = (pkg_dir / "config" / "exter_blend_mesh_collision2.obj").string();
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
@@ -192,7 +202,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         mesh_vert_map_[name] = verts;
     }
 
-    auto view_points_mesh_file = (pkg_dir / "config" / "view_cam_olson.obj").string();
+    auto view_points_mesh_file = (pkg_dir / "config" / "exter_blend_mesh_camera_view.obj").string();
 
     auto [view_points_mesh_verts, view_points_mesh_names] = shr_utils::load_meshes(view_points_mesh_file);
     for (int i = 0; i < view_points_mesh_names.size(); i++) {
@@ -201,7 +211,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         view_points_mesh_vert_map_[name_mesh] = verts_mesh;
     }
 
-    auto room_mesh_file = (pkg_dir / "config" / "new_olson_person.obj").string();
+    auto room_mesh_file = (pkg_dir / "config" / "exter_blend_mesh_person2.obj").string();
 
     auto [room_mesh_verts, room_mesh_names] = shr_utils::load_meshes(room_mesh_file);
     for (int i = 0; i < room_mesh_names.size(); i++) {
@@ -753,7 +763,7 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
 
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
     std::vector<std::string>
-            lndmarks = {"obstacles", "bedroom", "bathroom", "main_door"};
+            lndmarks = {"obstacles", "bedroom", "atelier", "main_door"};
 
     std::vector<std::string> view_point = {"visible_area"};
 
@@ -793,7 +803,6 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
         }
             // ###### POINTS GOING INTO CAMERA VIEW POINT WHEN NO PERSON IS THERE ########
             // doesnt allow the particle to go into view points when no observation in camera
-
         else if (observation.empty() && check_particle_at_cam_view(view_point[0], point)) {
             // update only if particle was not already in cam view
             if (!check_particle_at_cam_view(view_point[0], {old_particles[i].x, old_particles[i].y, -0.5})) {
@@ -804,6 +813,7 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
         }
     }
 }
+
 
 void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, PersonState & person_state, const std::vector<bool> &ms_status){
     std::cout << "Entering special_transitions function." << std::endl;
@@ -819,7 +829,7 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
 //        std::cout << "Person not currently being monitored. Checking special locations..." << std::endl;
         monitoring = transition_mesh_handler.monitor_lndmark(patient_x, patient_y);
         if (!monitoring.empty()) {
-//            std::cout << "Person entered special monitoring area: " << monitoring << std::endl;
+            std::cout << "Person entered special monitoring area: " << monitoring << std::endl;
         }
     }
 
@@ -835,7 +845,7 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
 
         if (obs_during_monitoring) {
 //            std::cout << "Observation detected during monitoring." << std::endl;
-
+            // if person outside the monitored area
             if (!transition_mesh_handler.check_person_at_loc(monitoring, patient_x, patient_y)){
 //                std::cout << "Person left special area, exiting monitoring." << std::endl;
                 monitoring_flag = false;
@@ -843,7 +853,7 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
                 no_obs_during_monitoring = false;
                 monitoring = "";
                 door_of_int_open = false;
-
+                start_time = std::chrono::steady_clock::time_point::min();
 //                std::cout << "Resetting particles to initial distribution." << std::endl;
                 particles = initial_part_dist;
                 return;
@@ -852,44 +862,55 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
             obs_during_monitoring = false;
         }
 
+        //trigger transition with door and ms
+        if (no_obs_during_monitoring){
 
-//         1) try without the if no_obs_during_monitoring for outside and motion for bedroom
-        //trigger transition with door
-//        if (no_obs_during_monitoring){
+            // NAN is considered min here
+            if (start_time == std::chrono::steady_clock::time_point::min()) {
+                start_time = std::chrono::steady_clock::now();
+            }
+
+            auto elapsed_time = std::chrono::duration_cast<std::chrono::minutes>(
+                    std::chrono::steady_clock::now() - start_time)
+                    .count();
+            if (elapsed_time < 2) {
 //            std::cout << "No observations detected during monitoring." << std::endl;
 
-            // since person doesnt keep main door open then we can assume that the open it when
-            // they want to go out
-            // this is not the case for bedroom where it can be open so we are going to use motion sensor to trigger
-            if (door_of_int_open && monitoring == "indoor") {
-//                std::cout << "Door opened during monitoring. Assuming person has left." << std::endl;
-//                std::cout << "Sampling particles in destination area." << std::endl;
+                // since person doesnt keep main door open then we can assume that the open it when
+                // they want to go out
+                // this is not the case for bedroom where it can be open so we are going to use motion sensor to trigger
+                if (door_of_int_open && monitoring == "indoor") {
+                    //                std::cout << "Door opened during monitoring. Assuming person has left." << std::endl;
+                    //                std::cout << "Sampling particles in destination area." << std::endl;
 
-                transition_mesh_handler.sample_in_bounds(monitoring, particles);
-                person_state = OUTDOOR;
+                    transition_mesh_handler.sample_in_bounds(monitoring, particles);
+                    person_state = OUTDOOR;
 
-                monitoring_flag = false;
-                obs_during_monitoring = false;
-                no_obs_during_monitoring = false;
-                monitoring = "";
-                door_of_int_open = false;
-                return;
-            }
-            if ( ms_of_int_triggered && monitoring == "corridor" ){
-                transition_mesh_handler.sample_in_bounds(monitoring, particles);
-                person_state = BEDROOM;
-
-                monitoring_flag = false;
-                obs_during_monitoring = false;
-                no_obs_during_monitoring = false;
-                monitoring = "";
-                door_of_int_open = false;
-                return;
+                    monitoring_flag = false;
+                    obs_during_monitoring = false;
+                    no_obs_during_monitoring = false;
+                    monitoring = "";
+                    door_of_int_open = false;
+                    start_time = std::chrono::steady_clock::time_point::min();
+                    return;
                 }
+                if (ms_of_int_triggered && monitoring == "corridor") {
+                    transition_mesh_handler.sample_in_bounds(monitoring, particles);
+                    person_state = BEDROOM;
 
-//            no_obs_during_monitoring = false;
-//        }
+                    monitoring_flag = false;
+                    obs_during_monitoring = false;
+                    no_obs_during_monitoring = false;
+                    monitoring = "";
+                    door_of_int_open = false;
+                    start_time = std::chrono::steady_clock::time_point::min();
+                    return;
+                }
+            }
+            no_obs_during_monitoring = false;
+        }
     }
 
     std::cout << "Exiting special_transitions function." << std::endl;
 }
+

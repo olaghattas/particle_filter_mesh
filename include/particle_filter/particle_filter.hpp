@@ -70,6 +70,9 @@ public:
     double patient_x = std::nan("");
     double patient_y = std::nan("");
 
+    // Check if start_time is NaN (we use min time as an equivalent check)
+    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::time_point::min();
+
     std::string monitoring = "";
     // Number of particles to draw
     int num_particles;

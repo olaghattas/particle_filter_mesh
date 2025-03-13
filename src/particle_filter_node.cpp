@@ -76,12 +76,30 @@ int main(int argc, char **argv) {
     std::vector<bool> ms_status_;
     double sigma_landmark[3] = {0.04, 0.04, 0.04};
 
-    particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
-    node->publish_particles(particle_filter.particles);
+//    particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
+    std::cout << " INIT : ^^^^ " << std::endl;
+//    node->publish_particles(particle_filter.particles);
 //    std::vector<Particle> particles = particle_filter.particles;
 
+    particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
+    node->publish_particles(particle_filter.particles);
+
+    bool getting_initial_dist = false;
+    while(getting_initial_dist){
+        door_status_ = {true, true, true};
+        ms_status_ = node->getmsstatus();
+        particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name, node->currentStateH, ms_status_);
+        node->publish_particles(particle_filter.particles);
+//        particle_filter.write_to_file("/home/olagh48652/particle_filter_ws/src/particle_filter_mesh/config/initial_dist_exeter.txt");
+        particle_filter.find_landmark_with_most_particles();
+    }
+
     while (rclcpp::ok()) {
+//        std::cout << " RCLPY OKAY : ^^^^ " << std::endl;
         if (not_initialized) {
+
+            std::cout << " not_initialized : ^^^^ " << std::endl;
+
             camera_extrinsics = node->get_cam_extrinsic_matrix();
             // make sure camera positions are set
             if (camera_extrinsics.size() != 0) {

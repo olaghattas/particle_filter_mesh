@@ -1,8 +1,10 @@
 ros2 run nav2_map_server map_server --ros-args -r map:=/map -p yaml_filename:=/home/olagh48652/particle_filter_mesh/map.yaml
+ros2 run nav2_map_server map_server --ros-args -r map:=/map -p yaml_filename:=/home/olagh48652/Desktop/maps/exteter_final_2.yaml
+
 ros2 lifecycle set /map_server configure
 ros2 lifecycle set /map_server activate
 
-
+cd particle_filter_ws && source install/setup.bash
 ros2 launch aptags_tf_broadcast tf_broadcast_helper.launch.py
 
 ros2 launch zed_display_rviz2 display_zed_cam.launch.py camera_model:=zed2i camera_name:=doorway
@@ -19,7 +21,7 @@ ros2 topic pub /zed_living_room_data_recording/zed_node_living_room_data_recordi
 objects: []"
 
 
-for easeir testing:
+for easier testing:
 record topic and play them
 ros2 bag record /zed/zed_node/right_raw_gray/image_raw_gray/compressed /zed/zed_node/body_trk/skeletons
 
