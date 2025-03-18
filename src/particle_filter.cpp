@@ -15,7 +15,7 @@
 #include <iostream>
 #include "shr_utils/geometry.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
-
+#include <ctime>
 #include <set>
 
 void ParticleFilter::check_unique_particles() {
@@ -807,6 +807,23 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
 
 void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, PersonState & person_state, const std::vector<bool> &ms_status){
     std::cout << "Entering special_transitions function." << std::endl;
+
+
+    // if time is between 3 and 7 am and the main door is open then assume person left
+    std::time_t current_time = std::time(nullptr);
+    std::tm *local_tm = std::localtime(&current_time);
+    int hour = local_tm->tm_hour;  // 0-23
+
+    if (hour >= 3 && hour < 7){
+        //checks if door open
+        if( !doors_status[transition_mesh_handler.aoi_to_door["inside"]]){
+            //sample outside
+            transition_mesh_handler.sample_in_bounds("inside", particles);
+            person_state = OUTDOOR;
+        }
+    }
+    // end time transition
+
 
     if (isnan(patient_x) && isnan(patient_y)){
 //        std::cout << "Patient position is NaN, exiting function." << std::endl;
