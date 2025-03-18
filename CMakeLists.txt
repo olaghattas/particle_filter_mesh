@@ -69,6 +69,10 @@ target_link_libraries(particle_filter_node yaml-cpp)
 target_link_libraries(particle_filter_node ${OpenCV_LIBRARIES})
 
 # Add executable
+add_executable(time_checker src/time_checker.cpp)
+ament_target_dependencies(time_checker ${dependencies1})
+
+# Add executable
 add_executable(transformation_test src/transformation_test.cpp)
 ament_target_dependencies(transformation_test ${dependencies1})
 ament_target_dependencies(transformation_test tf2 tf2_geometry_msgs)
@@ -81,7 +85,6 @@ target_link_libraries(transformation_test ${OpenCV_LIBRARIES})
 
 # Ensure particle_filter_node links with helper_lib
 target_link_libraries(particle_filter_node helper_lib)
-
 
 #add_executable(yaml_node src/example_yaml.cpp)
 #target_include_directories(yaml_node PUBLIC ${EIGEN3_INCLUDE_DIRS})
@@ -122,6 +125,7 @@ include_directories(
 )
 
 install(TARGETS
+        time_checker
         transformation_test
         particle_filter
         particle_filter_node
