@@ -291,8 +291,8 @@ public:
     // save coordinate map
     // use  ros2 run tf2_ros static_transform_publisher 1.1 -1.7 0 0 0 1 map nathan  to make sure of the trasnforms
     const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
-            {"living_room", {6.0, -3.0, 0.0}},  // x, y, z coordinates
-            {"bedroom",     {4.5, 2.5, 0.0}},
+            {"living_room", {-3.12, 1.4, 0.0}},  // x, y, z coordinates
+            {"bedroom",     {-0.9, -2.6, 0.0}},
             {"outside",     {-1.5, 0,  0.0}},
     };
 
