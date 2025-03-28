@@ -99,15 +99,15 @@ private:
     bool ms_bedroom;
     bool ms_corridor;
 
-    int k_label_h = -1;
-    int lv_label_h= -1;
-    int dw_label_h= -1;
-    int coor_label_h= -1;
+    std::vector<int> k_label_h;
+    std::vector<int> lv_label_h;
+    std::vector<int> dw_label_h;
+    std::vector<int> coor_label_h;
 
-    int k_label_f= -1;
-    int lv_label_f= -1;
-    int dw_label_f= -1;
-    int coor_label_f= -1;
+    std::vector<int> k_label_f;
+    std::vector<int> lv_label_f;
+    std::vector<int> dw_label_f;
+    std::vector<int> coor_label_f;
 
 
 
@@ -242,56 +242,56 @@ public:
 
     void k_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        k_label_h = msg->data;
+        k_label_h.push_back(msg->data);
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "k_label_h " << k_label_h << std::endl;
     }
 
     void lv_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        lv_label_h = msg->data;
+        lv_label_h.push_back(msg->data);
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "lv_label_h " << lv_label_h << std::endl;
     }
 
     void dw_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        dw_label_h = msg->data;
+        dw_label_h.push_back(msg->data);
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "dw_label_h " << dw_label_h << std::endl;
     }
 
     void cor_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        coor_label_h = msg->data;
+        coor_label_h.push_back(msg->data);
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "coor_label_h " << coor_label_h << std::endl;
     }
 
     void k_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        k_label_f = msg->data;
+        k_label_f.push_back(msg->data);
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "k_label_h " << k_label_f << std::endl;
     }
 
     void lv_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        lv_label_f = msg->data;
+        lv_label_f.push_back(msg->data);
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "lv_label_f " << lv_label_f << std::endl;
     }
 
     void dw_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        dw_label_f = msg->data;
+        dw_label_f.push_back(msg->data);
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "dw_label_f " << dw_label_f << std::endl;
     }
 
     void cor_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        coor_label_f = msg->data;
+        coor_label_f.push_back(msg->data);
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "coor_label_f " << coor_label_f << std::endl;
     }
@@ -343,8 +343,6 @@ public:
 //        bedroom_door, bathroom_door, living_room_door, outside_door
         return {ms_bedroom, ms_corridor};
     }
-
-
 
     Observation getObservation(ParticleFilter& particle_filter) {
 
@@ -532,74 +530,137 @@ public:
         PosePixCallback_generic(msg, "doorway", dw_label_h, dw_label_f, observation_doorway);
     }
 
-    void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, int &label_f, Observation& obs) {
-//        std::cout << " ************** PosePixCallback in " << location << std::endl;
-//
-//        std::cout << " ************** label_h  " << label_h << std::endl;
-//        std::cout << " ************** label_f  " << label_f << std::endl;
+
+    // have label_h and label_f as dictionaries
+    void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, std::vector<int> &label_h, std::vector<int> &label_f, Observation& obs) {
         // Reset observation
         obs.name = "";
         obs.des_pers = false;  // Flag to indicate if it's person h
 
         if (msg->objects.empty()) {
+            // Clear all labels if no objects are present
+            label_h.clear();
+            label_f.clear();
             return;  // No objects to process
         }
 
-        // Initially assume no valid observation
-        bool found_person_h = false;
-        bool found_person_f = false;
-        bool found_valid_person = false;
-        std::vector<zed_interfaces::msg::Object>::size_type fallback_ind = -1;  // Index of the first valid object
-
-        // If both labels are empty, take the first observation
-        if (label_h == -1 && label_f == -1) {
-            SetObservation(msg->objects[0], false, location, obs);
-            return;
+        // Gets all labels found in skeleton
+        std::unordered_set<int> object_labels;
+        for (const auto &obj : msg->objects) {
+            object_labels.insert(obj.label_id);
         }
 
-        // Process objects to find person h or a valid object
+        // Filter label_h to remove IDs not present in the skeleton
+        // std::remove if gets the id nto in skeleton and erase removes them from label_h
+        label_h.erase(std::remove_if(label_h.begin(), label_h.end(),
+                                     [&](int id) { return object_labels.find(id) == object_labels.end(); }),
+                      label_h.end());
+        // Filter label_f to remove IDs not present in the skeleton
+        label_f.erase(std::remove_if(label_f.begin(), label_f.end(),
+                                     [&](int id) { return object_labels.find(id) == object_labels.end(); }),
+                      label_f.end());
+
+        // If label_h is not empty, select the first valid label_h
+        if (!label_h.empty()) {
+            int selected_label_h = label_h.front();  // First label_h
+            // Process objects to find person h
+            for (const auto &obj : msg->objects) {
+                if (obj.label_id == selected_label_h) {
+                    SetObservation(obj, true, location, obs);  // It's person h
+                    return;  // Person h found, exit early
+                }
+            }
+        }
+
+        // If label_h is empty, find a valid object that is not label_f
         for (std::vector<zed_interfaces::msg::Object>::size_type ind = 0; ind < msg->objects.size(); ++ind) {
             const auto &obj = msg->objects[ind];
 
-//            std::cout << " ************** obj.label_id  " << obj.label_id << std::endl;
-            if (obj.label_id == label_f) {
-//                std::cout << " ************** obj.label_id  = label_f  " << std::endl;
-
-                found_person_f = true;
+            // Skip objects whose labels are in label_f
+            if (std::find(label_f.begin(), label_f.end(), obj.label_id) != label_f.end()) {
                 continue;  // Skip Florence objects
             }
 
-            if (obj.label_id == label_h) {
-                found_person_h = true;
-                SetObservation(obj, true, location, obs);  // It's person h
-                return;  // Person H found, no need to check further
-            }
-
-            // Store the first valid object (not f or h)
-            if (!found_valid_person) {
-//                std::cout << " **************  valid perosn obj.label_id  " << obj.label_id << std::endl;
-
+            // Fallback to the first valid object (not in label_f)
+            if (fallback_ind == -1) {
                 fallback_ind = ind;
-                found_valid_person = true;
+                SetObservation(msg->objects[fallback_ind], false, location, obs);  // Not person h
+                return;
             }
         }
 
-        // Handle cases where person h or f wasn't found
-        if (label_h != -1) {
-            label_h = -1;  // Label h is no longer valid
-        }
-        if (label_f != -1 && !found_person_f) {
-            label_f = -1;  // Label f is no longer valid
-        }
-
-        // If person h was not found, fallback to the first valid object
-        if (found_valid_person) {
-            SetObservation(msg->objects[fallback_ind], false, location, obs);  // Not person h
-        }
+        // only valid skeleton is f
+        return;
     }
 
+//    void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, int &label_f, Observation& obs) {
+////        std::cout << " ************** PosePixCallback in " << location << std::endl;
+////
+////        std::cout << " ************** label_h  " << label_h << std::endl;
+////        std::cout << " ************** label_f  " << label_f << std::endl;
+//        // Reset observation
+//        obs.name = "";
+//        obs.des_pers = false;  // Flag to indicate if it's person h
+//
+//        if (msg->objects.empty()) {
+//            return;  // No objects to process
+//        }
+//
+//        // Initially assume no valid observation
+//        bool found_person_h = false;
+//        bool found_person_f = false;
+//        bool found_valid_person = false;
+//        std::vector<zed_interfaces::msg::Object>::size_type fallback_ind = -1;  // Index of the first valid object
+//
+//        // If both labels are empty, take the first observation
+//        if (label_h == -1 && label_f == -1) {
+//            SetObservation(msg->objects[0], false, location, obs);
+//            return;
+//        }
+//
+//        // Process objects to find person h or a valid object
+//        for (std::vector<zed_interfaces::msg::Object>::size_type ind = 0; ind < msg->objects.size(); ++ind) {
+//            const auto &obj = msg->objects[ind];
+//
+////            std::cout << " ************** obj.label_id  " << obj.label_id << std::endl;
+//            if (obj.label_id == label_f) {
+////                std::cout << " ************** obj.label_id  = label_f  " << std::endl;
+//
+//                found_person_f = true;
+//                continue;  // Skip Florence objects
+//            }
+//
+//            if (obj.label_id == label_h) {
+//                found_person_h = true;
+//                SetObservation(obj, true, location, obs);  // It's person h
+//                return;  // Person H found, no need to check further
+//            }
+//
+//            // Store the first valid object (not f or h)
+//            if (!found_valid_person) {
+////                std::cout << " **************  valid perosn obj.label_id  " << obj.label_id << std::endl;
+//
+//                fallback_ind = ind;
+//                found_valid_person = true;
+//            }
+//        }
+//
+//        // Handle cases where person h or f wasn't found
+//        if (label_h != -1) {
+//            label_h = -1;  // Label h is no longer valid
+//        }
+//        if (label_f != -1 && !found_person_f) {
+//            label_f = -1;  // Label f is no longer valid
+//        }
+//
+//        // If person h was not found, fallback to the first valid object
+//        if (found_valid_person) {
+//            SetObservation(msg->objects[fallback_ind], false, location, obs);  // Not person h
+//        }
+//    }
 
-// Function to set the observation based on whether it's person h or not
+
+    // Function to set the observation based on whether it's person h or not
     void SetObservation(const zed_interfaces::msg::Object &obj, bool is_person_h, const std::string &location_name, Observation &obs) {
         obs.name = location_name;
         obs.des_pers = is_person_h;  // Flag for person h
