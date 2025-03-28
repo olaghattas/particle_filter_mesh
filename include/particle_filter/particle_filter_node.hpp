@@ -572,24 +572,15 @@ public:
             }
         }
 
-        // If label_h is empty, find a valid object that is not label_f
-        for (std::vector<zed_interfaces::msg::Object>::size_type ind = 0; ind < msg->objects.size(); ++ind) {
-            const auto &obj = msg->objects[ind];
-
-            // Skip objects whose labels are in label_f
-            if (std::find(label_f.begin(), label_f.end(), obj.label_id) != label_f.end()) {
-                continue;  // Skip Florence objects
-            }
-
-            // Fallback to the first valid object (not in label_f)
-            if (fallback_ind == -1) {
-                fallback_ind = ind;
-                SetObservation(msg->objects[fallback_ind], false, location, obs);  // Not person h
+        // Fallback: find the first object that is not in label_f
+        for (const auto &obj : msg->objects) {
+            if (std::find(label_f.begin(), label_f.end(), obj.label_id) == label_f.end()) {
+                SetObservation(obj, false, location, obs);  // Valid fallback object (not person h)
                 return;
             }
         }
 
-        // only valid skeleton is f
+        // only valid skeleton is f;  nothing to set.
         return;
     }
 
