@@ -65,10 +65,10 @@ private:
     rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr dw_label_H;
     rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr bed_label_H;
 
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr k_label_F;
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr lv_label_F;
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr dw_label_F;
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr bed_label_F;
+    // rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr k_label_F;
+    // rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr lv_label_F;
+    // rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr dw_label_F;
+    // rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr bed_label_F;
 
 
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_outdoor_sub;
@@ -104,10 +104,10 @@ private:
     int dw_label_h= -1;
     int bed_label_h= -1;
 
-    int k_label_f= -1;
-    int lv_label_f= -1;
-    int dw_label_f= -1;
-    int bed_label_f= -1;
+    // int k_label_f= -1;
+    // int lv_label_f= -1;
+    // int dw_label_f= -1;
+    // int bed_label_f= -1;
 
 
 
@@ -132,11 +132,11 @@ public:
 
         // olson
         pose_sub_k = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
+                "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 10,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
 
         pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
+                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 10,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
 
 
@@ -149,7 +149,7 @@ public:
 //                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
 
         pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
+                "/zed_doorway/zed_node_doorway/body_trk/skeletons", 10,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
 
 //        pose_sub_cor = create_subscription<zed_interfaces::msg::ObjectsStamped>(
@@ -157,7 +157,7 @@ public:
 //                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_corridor(msg); });
 
         pose_sub_bd = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_bedroom/zed_node_bedroom/body_trk/skeletons", 1,
+                "/zed_bedroom/zed_node_bedroom/body_trk/skeletons", 10,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_bedroom(msg); });
 
 //        ds1
@@ -201,21 +201,21 @@ public:
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { bed_label_Callback(msg); });
 
 
-        k_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/kitchen_s_label", 10,
-                [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_f_Callback(msg); });
+        // k_label_F = create_subscription<std_msgs::msg::Int32>(
+        //         "/kitchen_s_label", 10,
+        //         [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_f_Callback(msg); });
 
-        lv_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/living_room_s_label", 10,
-                [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_f_Callback(msg); });
+        // lv_label_F = create_subscription<std_msgs::msg::Int32>(
+        //         "/living_room_s_label", 10,
+        //         [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_f_Callback(msg); });
 
-        dw_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/doorway_s_label", 10,
-                [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_f_Callback(msg); });
+        // dw_label_F = create_subscription<std_msgs::msg::Int32>(
+        //         "/doorway_s_label", 10,
+        //         [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_f_Callback(msg); });
 
-        bed_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/bedroom_s_label", 10,
-                [this](const std_msgs::msg::Int32::SharedPtr msg) { bed_label_f_Callback(msg); });
+        // bed_label_F = create_subscription<std_msgs::msg::Int32>(
+        //         "/bedroom_s_label", 10,
+        //         [this](const std_msgs::msg::Int32::SharedPtr msg) { bed_label_f_Callback(msg); });
 
 
     }
@@ -261,39 +261,39 @@ public:
 //        std::cout << "msg->open;" << msg->data << std::endl;
     }
 
-    void k_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-//        std::cout << " ######################################################" << std::endl;
-        k_label_f = msg->data;
-//        std::cout << "msg->open;" << msg->data << std::endl;
-//        std::cout << "k_label_h " << k_label_f << std::endl;
-    }
+//     void k_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+// //        std::cout << " ######################################################" << std::endl;
+//         k_label_f = msg->data;
+// //        std::cout << "msg->open;" << msg->data << std::endl;
+// //        std::cout << "k_label_h " << k_label_f << std::endl;
+//     }
 
-    void lv_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-//        std::cout << " ######################################################" << std::endl;
-        lv_label_f = msg->data;
-//        std::cout << "msg->open;" << msg->data << std::endl;
-//        std::cout << "lv_label_f " << lv_label_f << std::endl;
-    }
+//     void lv_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+// //        std::cout << " ######################################################" << std::endl;
+//         lv_label_f = msg->data;
+// //        std::cout << "msg->open;" << msg->data << std::endl;
+// //        std::cout << "lv_label_f " << lv_label_f << std::endl;
+//     }
 
-    void dw_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-//        std::cout << " ######################################################" << std::endl;
-        dw_label_f = msg->data;
-//        std::cout << "msg->open;" << msg->data << std::endl;
-//        std::cout << "dw_label_f " << dw_label_f << std::endl;
-    }
+//     void dw_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+// //        std::cout << " ######################################################" << std::endl;
+//         dw_label_f = msg->data;
+// //        std::cout << "msg->open;" << msg->data << std::endl;
+// //        std::cout << "dw_label_f " << dw_label_f << std::endl;
+//     }
 
-    void bed_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-//        std::cout << " ######################################################" << std::endl;
-        bed_label_f = msg->data;
-//        std::cout << "msg->open;" << msg->data << std::endl;
-    }
+//     void bed_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+// //        std::cout << " ######################################################" << std::endl;
+//         bed_label_f = msg->data;
+// //        std::cout << "msg->open;" << msg->data << std::endl;
+//     }
 
     // save coordinate map
     // use  ros2 run tf2_ros static_transform_publisher 1.1 -1.7 0 0 0 1 map nathan  to make sure of the trasnforms
     const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
-            {"living_room", {6.0, -3.0, 0.0}},  // x, y, z coordinates
-            {"bedroom",     {4.5, 2.5, 0.0}},
-            {"outside",     {-1.5, 0,  0.0}},
+            {"living_room", {3.18, 0.9, 0.0}},  // x, y, z coordinates
+            {"bedroom",     {-2.45, -1.28, 0.0}},
+            {"outside",     {0.8, -6.55,  0.0}},
     };
 
     std::array<double, 4> sigma_pos;
@@ -508,24 +508,34 @@ public:
     }
 
     void PosePixCallback_kitchen(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        PosePixCallback_generic(msg, "kitchen", k_label_h, k_label_f, observation_kitchen);
+        PosePixCallback_generic(msg, "kitchen", k_label_h, observation_kitchen);
+                // PosePixCallback_generic(msg, "kitchen", k_label_h, k_label_f, observation_kitchen);
+
     }
 
     void PosePixCallback_living_room(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        PosePixCallback_generic(msg, "living_room", lv_label_h, lv_label_f, observation_living);
+        PosePixCallback_generic(msg, "living_room", lv_label_h, observation_living);
+                // PosePixCallback_generic(msg, "living_room", lv_label_h, lv_label_f, observation_living);
+// 
     }
 
     void PosePixCallback_bedroom(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        PosePixCallback_generic(msg, "bedroom", bed_label_h, bed_label_f, observation_bedroom);
+        PosePixCallback_generic(msg, "bedroom", bed_label_h, observation_bedroom);
+                // PosePixCallback_generic(msg, "bedroom", bed_label_h, bed_label_f, observation_bedroom);
+
     }
 
 
     void PosePixCallback_doorway(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        PosePixCallback_generic(msg, "doorway", dw_label_h, dw_label_f, observation_doorway);
+        PosePixCallback_generic(msg, "doorway", dw_label_h, observation_doorway);
+                // PosePixCallback_generic(msg, "doorway", dw_label_h, dw_label_f, observation_doorway);
+
     }
 
-    void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, int &label_f, Observation& obs) {
-//        std::cout << " ************** PosePixCallback in " << location << std::endl;
+    // void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, int &label_f, Observation& obs) {
+    void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, Observation& obs) {
+       
+// std::cout << " ************** PosePixCallback in " << location << std::endl;
 //
 //        std::cout << " ************** label_h  " << label_h << std::endl;
 //        std::cout << " ************** label_f  " << label_f << std::endl;
@@ -544,7 +554,9 @@ public:
         std::vector<zed_interfaces::msg::Object>::size_type fallback_ind = -1;  // Index of the first valid object
 
         // If both labels are empty, take the first observation
-        if (label_h == -1 && label_f == -1) {
+        if (label_h == -1) {
+        // if (label_h == -1 && label_f == -1) {
+
             SetObservation(msg->objects[0], false, location, obs);
             return;
         }
@@ -553,13 +565,13 @@ public:
         for (std::vector<zed_interfaces::msg::Object>::size_type ind = 0; ind < msg->objects.size(); ++ind) {
             const auto &obj = msg->objects[ind];
 
-//            std::cout << " ************** obj.label_id  " << obj.label_id << std::endl;
-            if (obj.label_id == label_f) {
-//                std::cout << " ************** obj.label_id  = label_f  " << std::endl;
+// //            std::cout << " ************** obj.label_id  " << obj.label_id << std::endl;
+//             if (obj.label_id == label_f) {
+// //                std::cout << " ************** obj.label_id  = label_f  " << std::endl;
 
-                found_person_f = true;
-                continue;  // Skip Florence objects
-            }
+//                 found_person_f = true;
+//                 continue;  // Skip Florence objects
+//             }
 
             if (obj.label_id == label_h) {
                 found_person_h = true;
@@ -580,9 +592,9 @@ public:
         if (label_h != -1) {
             label_h = -1;  // Label h is no longer valid
         }
-        if (label_f != -1 && !found_person_f) {
-            label_f = -1;  // Label f is no longer valid
-        }
+        // if (label_f != -1 && !found_person_f) {
+        //     label_f = -1;  // Label f is no longer valid
+        // }
 
         // If person h was not found, fallback to the first valid object
         if (found_valid_person) {

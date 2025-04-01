@@ -826,10 +826,27 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
 
     if (hour >= 3 && hour < 7){
         //checks if door open
-        if( !doors_status[transition_mesh_handler.aoi_to_door["inside"]]){
+        std::cout << "time betwwen 3 and 7" << std::endl;
+
+        int door_index_inside = transition_mesh_handler.aoi_to_door["indoor"];
+        std::cout << "door_index_inside"  << door_index_inside << std::endl;
+        bool door_main_open = !doors_status[door_index_inside];
+        std::cout << "door_main_open"  << door_main_open << std::endl;
+        if(door_main_open){
+            std::cout << "###### MAIN DOOR OPEN ####" << std::endl;
             //sample outside
-            transition_mesh_handler.sample_in_bounds("inside", particles);
+            transition_mesh_handler.sample_in_bounds("indoor", particles);
+            std::cout << "###### TRANSITIONED ####" << std::endl;
             person_state = OUTDOOR;
+
+            monitoring_flag = false;
+            obs_during_monitoring = false;
+            no_obs_during_monitoring = false;
+            monitoring = "";
+            door_of_int_open = false;
+            start_time = std::chrono::steady_clock::time_point::min();
+
+            return;
         }
     }
     // end time transition

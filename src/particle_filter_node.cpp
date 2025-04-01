@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
             first_obs = node->first_obs;
 
             // for debug
-//            first_obs = true;
+        //    first_obs = true;
             // NO FIRST OBSERVATION KEEP DISTRIBUTION AS IS
             if (first_obs) {
 
