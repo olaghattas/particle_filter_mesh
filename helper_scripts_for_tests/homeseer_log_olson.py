@@ -15,8 +15,8 @@ class HomeSeerPublisher(Node):
 
         # Mapping door names to reference IDs
         self.sensor_refs = {
-            "main_door": 6,
-            "bedroom_door": 74,
+            "main_door": 74,
+            "bedroom_door": 6,
             "motion_bedroom": 68, # ms1
         }
 

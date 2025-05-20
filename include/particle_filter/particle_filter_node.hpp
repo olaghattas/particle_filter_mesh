@@ -34,6 +34,7 @@
 #include "zed_interfaces/msg/objects_stamped.hpp"
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include "std_msgs/msg/int32.hpp"
+#include "std_msgs/msg/float64_multi_array.hpp"
 #include "particle_filter_msgs/msg/pose_msg.hpp"
 #include "zed_interfaces/msg/bounding_box3_d.hpp"
 #include "zed_interfaces/msg/object.hpp"
@@ -52,6 +53,7 @@ private:
 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_3d_pt;
+
 
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
 
@@ -109,10 +111,16 @@ private:
     std::vector<int> dw_label_f;
     std::vector<int> coor_label_f;
 
+// if true then the labels of howie and suzie will nbe flipped
+// for debug
+    bool f_is_h = true;
+
 
 
 public:
     PersonState currentStateH;
+    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publish_person_loc;
+
     bool first_obs = false;
     ParticleFilterNode() : rclcpp::Node("particle_filter"), currentStateH(UNSEEN)  {
 
@@ -123,6 +131,8 @@ public:
 //        map_cam_aptag_un["doorway"] = "aptag_" + std::string(std::getenv("tag_doorway"));
 //        map_cam_aptag_un["kitchen"] = "aptag_" + std::string(std::getenv("tag_kitchen"));
 //        map_cam_aptag_un["dining_room"] = "aptag_" + std::string(std::getenv("tag_dining_room"));
+
+        publish_person_loc = this->create_publisher<std_msgs::msg::Float64MultiArray>("person_loc", 10);
 
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("marker", 10);
 
@@ -222,8 +232,6 @@ public:
                 "/cooridor_s_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { cor_label_f_Callback(msg); });
 
-
-
     }
 
     void MSBedroomCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
@@ -242,56 +250,98 @@ public:
 
     void k_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        k_label_h.push_back(msg->data);
+//        k_label_h.push_back(msg->data);
+        if (f_is_h){
+            k_label_f.push_back(msg->data);
+        }else{
+            k_label_h.push_back(msg->data);
+        }
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "k_label_h " << k_label_h << std::endl;
     }
 
     void lv_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        lv_label_h.push_back(msg->data);
+//        lv_label_h.push_back(msg->data);
+        if (f_is_h){
+            lv_label_f.push_back(msg->data);
+        }else{
+            lv_label_h.push_back(msg->data);
+        }
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "lv_label_h " << lv_label_h << std::endl;
     }
 
     void dw_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        dw_label_h.push_back(msg->data);
+//        dw_label_h.push_back(msg->data);
+        if (f_is_h){
+            dw_label_f.push_back(msg->data);}
+        else{
+            dw_label_h.push_back(msg->data);
+        }
+
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "dw_label_h " << dw_label_h << std::endl;
     }
 
     void cor_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        coor_label_h.push_back(msg->data);
+//        coor_label_h.push_back(msg->data);
+
+//        if (f_is_h){
+//            coor_label_f.push_back(msg->data);}
+//        else{
+//            coor_label_h.push_back(msg->data);
+//        }
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "coor_label_h " << coor_label_h << std::endl;
     }
 
     void k_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        k_label_f.push_back(msg->data);
+//        k_label_f.push_back(msg->data);
+        if (f_is_h){
+            k_label_h.push_back(msg->data);}
+        else{
+            k_label_f.push_back(msg->data);
+        }
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "k_label_h " << k_label_f << std::endl;
     }
 
     void lv_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        lv_label_f.push_back(msg->data);
+//        lv_label_f.push_back(msg->data);
+        if (f_is_h){
+            lv_label_h.push_back(msg->data);}
+        else{
+            lv_label_f.push_back(msg->data);
+        }
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "lv_label_f " << lv_label_f << std::endl;
     }
 
     void dw_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        dw_label_f.push_back(msg->data);
+//        dw_label_f.push_back(msg->data);
+        if (f_is_h){
+            dw_label_h.push_back(msg->data);}
+        else{
+            dw_label_f.push_back(msg->data);
+        }
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "dw_label_f " << dw_label_f << std::endl;
     }
 
     void cor_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        coor_label_f.push_back(msg->data);
+//        coor_label_f.push_back(msg->data);
+//        if (f_is_h){
+//            lv_label_h.push_back(msg->data);}
+//        else{
+//            coor_label_f.push_back(msg->data);
+//        }
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "coor_label_f " << coor_label_f << std::endl;
     }

@@ -5,6 +5,9 @@ ros2 lifecycle set /map_server activate
 
 ros2 launch aptags_tf_broadcast tf_broadcast_helper.launch.py
 
+cd ~/particle_filter_ws/src/particle_filter_mesh/helper_scripts_for_tests
+$ python3 homeseer_log_olson.py
+
 ros2 launch zed_display_rviz2 display_zed_cam.launch.py camera_model:=zed2i camera_name:=doorway
 
 dealing with ros2 bag
@@ -19,7 +22,7 @@ ros2 topic pub /zed_living_room_data_recording/zed_node_living_room_data_recordi
 objects: []"
 
 
-for easeir testing:
+for easier testing:
 record topic and play them
 ros2 bag record /zed/zed_node/right_raw_gray/image_raw_gray/compressed /zed/zed_node/body_trk/skeletons
 

@@ -201,7 +201,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         view_points_mesh_vert_map_[name_mesh] = verts_mesh;
     }
 
-    auto room_mesh_file = (pkg_dir / "config" / "new_olson_person.obj").string();
+    auto room_mesh_file = (pkg_dir / "config" / "olson_person.obj").string();
 
     auto [room_mesh_verts, room_mesh_names] = shr_utils::load_meshes(room_mesh_file);
     for (int i = 0; i < room_mesh_names.size(); i++) {
@@ -628,97 +628,6 @@ void ParticleFilter::updateWeightsWithoutObs(double std_landmark[]) {
     }
 
 }
-//
-//void ParticleFilter::updateWeights(double std_landmark[],
-//                                   std::vector<Observation> observations,
-//                                   Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams) {
-//    // Update the weights of each particle using a multi-variate Gaussian distribution. You can read
-//
-//    double sigma_x = std_landmark[0];
-//    double sigma_y = std_landmark[1];
-//    double sigma_z = std_landmark[2];
-//    double weights_sum = 0;
-//
-//    if (!current_observation.hasNaN()) {
-//        previous_observation = current_observation;
-//    }
-//
-//    // if there is an observation update the particle near the observation
-//    if (!current_observation.hasNaN()) {
-//        Observation current_obs = observations[0]; // TODO be changed when more observations are added
-//        Eigen::Vector4d homogeneousPoint;
-//        homogeneousPoint << current_obs.x, current_obs.y, current_obs.z, 1.0;
-//
-//        Eigen::Vector4d TransformedPoint;
-//
-//        TransformedPoint <<
-//                         extrinsicParams(0, 0) * homogeneousPoint[0] + extrinsicParams(0, 1) * homogeneousPoint[1] +
-//                         extrinsicParams(0, 2) * homogeneousPoint[2] + extrinsicParams(0, 3) * homogeneousPoint[3],
-//                extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-//                extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-//                extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-//                extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-//                extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-//                extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-//
-////    if (previous_observation.size() < 10)
-////        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
-////    else {
-////        // Remove the oldest observation
-////        previous_observation.erase(previous_observation.begin());
-////
-////        // Add the newest observation
-////        previous_observation.push_back(Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]));
-////    }
-//
-//        /// ONLY ONE OBSERVATION AT A TIME
-//        current_observation = Eigen::Vector2d(TransformedPoint[0], TransformedPoint[1]);
-//
-//        // loop through each of the particle to update
-//        for (int i = 0; i < num_particles; ++i) {
-//            Particle *p = &particles[i];
-//            double weight = 1.0;
-//
-//            double x_ = p->x - current_obs.x;
-//            double y_ = p->y - current_obs.y;
-//            double factor = 4;
-//
-//            // Dynamically compute sigma based on the order of magnitude of x_ and y_
-//            sigma_x = std::pow(10, std::floor(std::log10(std::abs(x_))) - 1); // Order of magnitude for x_
-//            sigma_y = std::pow(10, std::floor(std::log10(std::abs(y_))) - 1);
-//
-//            double gaussian = (std::pow(x_, 2) / (2 * factor * std::pow(sigma_x, 2))) +
-//                              (std::pow(y_, 2) / (2 * std::pow(sigma_y, 2)));
-//
-//            double gaussian_factor = 1 / (2 * M_PI * sigma_x * sigma_y);
-//            gaussian = exp(-gaussian);
-//            gaussian = gaussian * gaussian_factor;
-//
-//            weight *= gaussian;
-//            weights_sum += weight;
-//            particles[i].weight = weight;
-//        }
-//    }
-//        // if no observation
-//    else {
-//        for (int i = 0; i < num_particles; ++i) {
-//            Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
-//
-//            // Decrease weight of particle in cam view
-//            if (check_particle_at_cam_view("visible_area", point)) {
-//                // TODO: check diff weights
-//                particles[i].weight = particles[i].weight / 10;
-//            }
-//            weights_sum +=  particles[i].weight;
-//        }
-//    }
-//    // normalize weights to bring them in (0, 1]
-//    for (int i = 0; i < num_particles; i++) {
-//        particles[i].weight /= weights_sum;
-//    }
-//
-//}
-//
 
 bool ParticleFilter::check_particle_at(const std::string &loc, Eigen::Vector3d point) {
     // collision mesh
@@ -808,7 +717,6 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
 void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, PersonState & person_state, const std::vector<bool> &ms_status){
     std::cout << "Entering special_transitions function." << std::endl;
 
-
     // if time is between 3 and 7 am and the main door is open then assume person left
     std::time_t current_time = std::time(nullptr);
     std::tm *local_tm = std::localtime(&current_time);
@@ -821,9 +729,19 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
             transition_mesh_handler.sample_in_bounds("inside", particles);
             person_state = OUTDOOR;
         }
+
     }
     // end time transition
 
+    // special transitions that dont depend on monitoring area
+    int ms_index_corr = transition_mesh_handler.aoi_to_ms["corridor"];
+    bool ms_of_coor_triggered = ms_status[ms_index_corr];
+    if (ms_of_coor_triggered){
+        transition_mesh_handler.sample_in_bounds("corridor", particles);
+        person_state = BEDROOM;
+        transported = true;
+        return;
+    }
 
     if (isnan(patient_x) && isnan(patient_y)){
 //        std::cout << "Patient position is NaN, exiting function." << std::endl;
@@ -848,7 +766,7 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
         door_of_int_open = !doors_status[door_index];
 //        std::cout << "Door status: " << door_of_int_open << std::endl;
         int ms_index = transition_mesh_handler.aoi_to_ms[monitoring];
-        ms_of_int_triggered = doors_status[ms_index];
+        ms_of_int_triggered = ms_status[ms_index];
 
         if (obs_during_monitoring) {
 //            std::cout << "Observation detected during monitoring." << std::endl;
@@ -883,7 +801,9 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
 //                std::cout << "Sampling particles in destination area." << std::endl;
 
                 transition_mesh_handler.sample_in_bounds(monitoring, particles);
+
                 person_state = OUTDOOR;
+                transported = true;
 
                 monitoring_flag = false;
                 obs_during_monitoring = false;
@@ -895,6 +815,7 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
             if ( ms_of_int_triggered && monitoring == "corridor" ){
                 transition_mesh_handler.sample_in_bounds(monitoring, particles);
                 person_state = BEDROOM;
+                transported = true;
 
                 monitoring_flag = false;
                 obs_during_monitoring = false;
@@ -902,7 +823,7 @@ void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, 
                 monitoring = "";
                 door_of_int_open = false;
                 return;
-                }
+            }
 
 //            no_obs_during_monitoring = false;
 //        }

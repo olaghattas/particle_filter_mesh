@@ -60,12 +60,16 @@ private:
     bool no_obs_during_monitoring = false;
     bool door_of_int_open = false;
     bool ms_of_int_triggered = false;
+
+    // this is added due to the particles jumping back after transpoting them.
+    // since transporting depends on lack of oberservation, the code for no observation messes with
+    // with the logic
     // Random number generator
 //    std::random_device rd;
 //    std::mt19937 gen;
 
 public:
-
+    bool transported = false;
     std::vector<Particle> initial_part_dist;
     double patient_x = std::nan("");
     double patient_y = std::nan("");
