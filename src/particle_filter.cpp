@@ -18,6 +18,8 @@
 #include <ctime>
 #include <set>
 
+
+#define EPSILON 1e-4
 void ParticleFilter::check_unique_particles() {
     std::set<std::pair<double, double>> unique_positions;
 
@@ -28,11 +30,9 @@ void ParticleFilter::check_unique_particles() {
 //    std::cout << "Unique particles: " << unique_positions.size() << " out of " << num_particles << std::endl;
 
     if (unique_positions.size() < num_particles * 0.5) { // Less than 50% unique
-        std::cout << "Warning: Particles have lost diversity!" << std::endl;
+//        std::cout << "Warning: Particles have lost diversity!" << std::endl;
     }
 }
-
-#define EPSILON 1e-4
 
 void ParticleFilter::normalize_weights(double sum_weights) {
 
@@ -91,7 +91,6 @@ std::string ParticleFilter::find_landmark_with_most_particles() {
         return "";
     }
 }
-
 
 void ParticleFilter::write_to_file(std::string filename) {
     std::ofstream outputFile(filename);
@@ -226,108 +225,11 @@ void ParticleFilter::particles_in_range(std::pair<double, double> x_bound, std::
     }
 }
 
-//void ParticleFilter::motion_model(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
-//                                  std::vector<bool> doors_status, std::string observation) {
-////    std::normal_distribution<double> xNoise(0, std_pos[0]);
-////    std::normal_distribution<double> yNoise(0, std_pos[1]);
-////    std::normal_distribution<double> zNoise(0, std_pos[2]);
-////    std::normal_distribution<double> yawNoise(0, std_pos[3]);
-//    std::random_device rd;
-//    std::mt19937 gen;
-//
-//    std::normal_distribution<double> xNoise(0, 0.25);
-//    std::normal_distribution<double> yNoise(0, 0.25);
-//    std::normal_distribution<double> zNoise(0, 0.03);
-//    std::normal_distribution<double> yawNoise(0, 0.03);
-//
-//
-//    auto particles_before = particles;
-//    for (auto &p: particles) {
-//        // only 80 percent of the particle will be directed in the direction of the vector the rest will be random
-//        // Calculate average displacement vector from previous readings
-//
-//        ///
-//        // if current and previous have NAN then randomly distribute
-//        // if current has value and previous hasNAN then randomly distribute
-//        // (1) ==>  can be summarized to previous hasNAN then randomly distribute
-//
-//        // (2) if current and previous have values then displace in the direction of vector
-//        // (3) if current isNaN and previous has value then update according to displacement for 5 iteration then set previous to NAN
-//        ///
-//        if (!previous_observation.hasNaN()) {  // (1)
-//            // && p.id < num_particles * 0.8) {
-//            use_max_loc = false;
-//            if (!current_observation.hasNaN()) { // (2)
-//                // Extract x and y coordinates from each reading
-//                double dx = current_observation.x() - previous_observation.x();
-//                double dy = current_observation.y() - previous_observation.y();
-//                avg_displacement = Eigen::Vector2d(dx, dy);
-//
-//                // Normalize average displacement for velocity calculation
-//                // double avg_disp = avg_displacement.norm();
-//
-//                // Update particle position and orientation using avg_direction and velocity
-//                double delta_x = avg_displacement.x() + xNoise(gen);
-//                double delta_y = avg_displacement.y() + yNoise(gen);
-//                double delta_yaw = yawNoise(gen);
-//                p.x += delta_x;
-//                p.y += delta_y;
-//                p.theta += delta_yaw;
-//            } else { // (3)
-//                // Use previous displacement
-//                double delta_x = avg_displacement.x() + xNoise(gen);
-//                double delta_y = avg_displacement.y() + yNoise(gen);
-//                double delta_yaw = yawNoise(gen);
-//                p.x += delta_x;
-//                p.y += delta_y;
-//                p.theta += delta_yaw;
-//
-//                if (previous_count < 5) {
-//                    previous_count++;
-//                } else {
-//                    previous_count = 0;
-//                    previous_observation = Eigen::Vector2d::Constant(std::numeric_limits<double>::quiet_NaN());
-//                }
-//            }
-//
-//        } else {
-//            // add noise randomly
-//            //Add control noise
-//            double delta_x = xNoise(gen); //* delta_t;
-//            double delta_y = yNoise(gen); // * delta_t;
-////            double delta_z = zNoise(gen); // * delta_t;
-//            double delta_yaw = yawNoise(gen); // * delta_t;
-//
-//            p.x += delta_x;
-//            p.y += delta_y;
-//            p.z += 0;
-//            p.theta += delta_yaw;
-//
-//
-//            /// NO current observation
-//
-//            if (!use_max_loc) {
-//                // if it was not already calculated then check which room has the highest number of particles
-//                // no need to recalculate cause this value won't change unless an observation is made which will cause
-//                // the upper part  of the if to change use_max_loc to false
-//                max_particles_loc = find_landmark_with_most_particles();
-//                std::cout << "max_loc _ " << max_particles_loc << std::endl;
-//                use_max_loc = true;
-//            }
-//        }
-//    }
-//
-//
-//    ParticleFilter::enforce_non_collision(particles_before, doors_status, observation);
-//
-////    write_to_file("after_motion_model.txt");
-//}
-
 void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
-                                       const std::vector<bool> &doors_status, const std::string &observation, PersonState& person_state, const std::vector<bool> &ms_status) {
+                                       const std::vector<bool> &doors_status, const std::string &observation) {
 
-    std::normal_distribution<double> xNoise(0, 0.25);
-    std::normal_distribution<double> yNoise(0, 0.25);
+    std::normal_distribution<double> xNoise(0, 0.15);
+    std::normal_distribution<double> yNoise(0, 0.15);
     std::normal_distribution<double> zNoise(0, 0.03);
     std::normal_distribution<double> yawNoise(0, 0.03);
 
@@ -356,7 +258,6 @@ void ParticleFilter::motion_model_noisy(double delta_t, std::array<double, 4> st
 
     enforce_non_collision(particles_before, doors_status, observation);
     // check for speacial cases
-    special_transitions(doors_status, person_state, ms_status);
 }
 
 // Function to calculate Neff
@@ -587,10 +488,6 @@ void ParticleFilter::updateWeightsWithObs(double std_landmark[],
     // Normalize weights
     normalize_weights(weights_sum);
 
-    // Function will be entered when there is an observation
-    if (monitoring_flag){
-        obs_during_monitoring =  true;
-    }
 
 }
 
@@ -621,11 +518,6 @@ void ParticleFilter::updateWeightsWithoutObs(double std_landmark[]) {
     max_particles_loc = find_landmark_with_most_particles();
     std::cout << "max_loc _ " << max_particles_loc << std::endl;
 
-
-
-    if (monitoring_flag){
-        no_obs_during_monitoring =  true;
-    }
 
 }
 
@@ -714,120 +606,114 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
     }
 }
 
-void ParticleFilter::special_transitions(const std::vector<bool> &doors_status, PersonState & person_state, const std::vector<bool> &ms_status){
-    std::cout << "Entering special_transitions function." << std::endl;
-
-    // if time is between 3 and 7 am and the main door is open then assume person left
-    std::time_t current_time = std::time(nullptr);
-    std::tm *local_tm = std::localtime(&current_time);
-    int hour = local_tm->tm_hour;  // 0-23
-
-    if (hour >= 3 && hour < 7){
-        //checks if door open
-        if( !doors_status[transition_mesh_handler.aoi_to_door["inside"]]){
-            //sample outside
-            transition_mesh_handler.sample_in_bounds("inside", particles);
-            person_state = OUTDOOR;
-        }
-
-    }
-    // end time transition
-
-    // special transitions that dont depend on monitoring area
-    int ms_index_corr = transition_mesh_handler.aoi_to_ms["corridor"];
-    bool ms_of_coor_triggered = ms_status[ms_index_corr];
-    if (ms_of_coor_triggered){
-        transition_mesh_handler.sample_in_bounds("corridor", particles);
-        person_state = BEDROOM;
-        transported = true;
-        return;
-    }
-
-    if (isnan(patient_x) && isnan(patient_y)){
-//        std::cout << "Patient position is NaN, exiting function." << std::endl;
-        return;
-    }
-
-//    std::cout << "Checking if person is in a special designated area..." << std::endl;
-
-    if (monitoring.empty()){
-//        std::cout << "Person not currently being monitored. Checking special locations..." << std::endl;
-        monitoring = transition_mesh_handler.monitor_lndmark(patient_x, patient_y);
-        if (!monitoring.empty()) {
-//            std::cout << "Person entered special monitoring area: " << monitoring << std::endl;
-        }
-    }
-
-    if (!monitoring.empty()){
-        monitoring_flag = true;
-//        std::cout << "Person is in a special area: " << monitoring << std::endl;
-
-        int door_index = transition_mesh_handler.aoi_to_door[monitoring];
-        door_of_int_open = !doors_status[door_index];
-//        std::cout << "Door status: " << door_of_int_open << std::endl;
-        int ms_index = transition_mesh_handler.aoi_to_ms[monitoring];
-        ms_of_int_triggered = ms_status[ms_index];
-
-        if (obs_during_monitoring) {
-//            std::cout << "Observation detected during monitoring." << std::endl;
-
-            if (!transition_mesh_handler.check_person_at_loc(monitoring, patient_x, patient_y)){
-//                std::cout << "Person left special area, exiting monitoring." << std::endl;
-                monitoring_flag = false;
-                obs_during_monitoring = false;
-                no_obs_during_monitoring = false;
-                monitoring = "";
-                door_of_int_open = false;
-
-//                std::cout << "Resetting particles to initial distribution." << std::endl;
-                particles = initial_part_dist;
-                return;
-            }
-
-            obs_during_monitoring = false;
-        }
-
-
-//         1) try without the if no_obs_during_monitoring for outside and motion for bedroom
-        //trigger transition with door
-//        if (no_obs_during_monitoring){
-//            std::cout << "No observations detected during monitoring." << std::endl;
-
-            // since person doesnt keep main door open then we can assume that the open it when
-            // they want to go out
-            // this is not the case for bedroom where it can be open so we are going to use motion sensor to trigger
-            if (door_of_int_open && monitoring == "indoor") {
-//                std::cout << "Door opened during monitoring. Assuming person has left." << std::endl;
-//                std::cout << "Sampling particles in destination area." << std::endl;
-
-                transition_mesh_handler.sample_in_bounds(monitoring, particles);
-
-                person_state = OUTDOOR;
-                transported = true;
-
-                monitoring_flag = false;
-                obs_during_monitoring = false;
-                no_obs_during_monitoring = false;
-                monitoring = "";
-                door_of_int_open = false;
-                return;
-            }
-            if ( ms_of_int_triggered && monitoring == "corridor" ){
-                transition_mesh_handler.sample_in_bounds(monitoring, particles);
-                person_state = BEDROOM;
-                transported = true;
-
-                monitoring_flag = false;
-                obs_during_monitoring = false;
-                no_obs_during_monitoring = false;
-                monitoring = "";
-                door_of_int_open = false;
-                return;
-            }
-
-//            no_obs_during_monitoring = false;
-//        }
-    }
-
-    std::cout << "Exiting special_transitions function." << std::endl;
+void  ParticleFilter::reset_monitoringDetails(){
+    monitoring_flag = false;
+    monitoring_details.monitored_area = "";
+    monitoring_details.trigger_sensor = "";
+    monitoring_details.sensor_already_triggered=false;
+    monitoring_details.start_time = std::chrono::steady_clock::time_point();  // Reset to epoch
 }
+
+std::chrono::steady_clock::time_point getCurrentTime() {
+    return std::chrono::steady_clock::now();
+}
+
+void  ParticleFilter::apply_special_transitions(const std::vector<bool> &doors_status, PersonState &person_state, const std::vector<bool> &ms_status){
+    // if not monitoring then dont do anything
+    if (!monitoring_flag) return;
+
+
+    auto now = getCurrentTime();
+    auto elapsed = std::chrono::duration_cast<std::chrono::minutes>(now - monitoring_details.start_time);
+
+    if (elapsed >= std::chrono::minutes(1)){
+        reset_monitoringDetails();
+        monitoring_flag = false;
+        return;
+    }
+
+    bool sensor_triggered = false;
+    // check if sensor of interest triggered
+    if (monitoring_details.sensor_already_triggered){
+        sensor_triggered = true;
+    }
+    else{
+        if (monitoring_details.trigger_sensor == "ms"){
+            int ms_index = transition_mesh_handler.aoi_to_ms[monitoring_details.monitored_area];
+            sensor_triggered = ms_status[ms_index];
+        }else{
+            int door_index = transition_mesh_handler.aoi_to_door[monitoring_details.monitored_area];
+            sensor_triggered = !doors_status[door_index];
+        }
+    }
+
+    if (sensor_triggered){
+        // transition
+        std::string dest = transition_mesh_handler.aoi_to_dest[monitoring_details.monitored_area];
+        if (dest == "outdoor"){
+            person_state = OUTDOOR;
+        }else if(dest == "bedroom"){
+            person_state = BEDROOM;
+        }
+        transition_mesh_handler.sample_in_bounds(dest, particles);
+        monitoring_flag = false;
+        reset_monitoringDetails();
+        return;
+    }
+
+}
+
+
+void  ParticleFilter::special_transitions_monitoring(const std::vector<bool> &doors_status, const std::vector<bool> &ms_status, bool topic_info){
+    // will be called only if there is an observation
+    if (isnan(patient_x) && isnan(patient_y)) return;
+
+    if (monitoring_details.monitored_area.empty()){
+        std::cout << "Person not currently being monitored. Checking special locations..." << std::endl;
+        monitoring_details.monitored_area = transition_mesh_handler.monitor_lndmark(patient_x, patient_y);
+
+        if(topic_info){
+            monitoring_details.monitored_area = "indoor";
+            monitoring_details.trigger_sensor = "ds";
+        }
+
+        if (!monitoring_details.monitored_area.empty()){
+            std::cout << "Monitoring started for area: " << monitoring_details.monitored_area << std::endl;
+            monitoring_flag = true;
+            monitoring_details.start_time = getCurrentTime();
+            if (monitoring_details.trigger_sensor.empty()){
+                // todo optimize later
+                if (monitoring_details.monitored_area == "corridor") {
+                    monitoring_details.trigger_sensor = "ms";
+                } else {
+                    monitoring_details.trigger_sensor = "ds";
+                }
+            }
+        }
+    }
+
+    if (monitoring_flag) {
+        // special case since it depends on topic
+//    if (monitoring_details.monitored_area != "indoor"){
+// add the above for tompics at olson there is no topic
+        if (!transition_mesh_handler.check_person_at_loc(monitoring_details.monitored_area, patient_x, patient_y)) {
+//          std::cout << "Person left special area, exiting monitoring." << std::endl;
+            monitoring_flag = false;
+            reset_monitoringDetails();
+//        particles = initial_part_dist;
+            return;
+        }
+//    }
+
+        if (!monitoring_details.sensor_already_triggered) {
+            if (monitoring_details.trigger_sensor == "ms") {
+                int ms_index = transition_mesh_handler.aoi_to_ms[monitoring_details.monitored_area];
+                monitoring_details.sensor_already_triggered = ms_status[ms_index];
+            } else {
+                int door_index = transition_mesh_handler.aoi_to_door[monitoring_details.monitored_area];
+                monitoring_details.sensor_already_triggered = !doors_status[door_index];
+            }
+        }
+    }
+}
+

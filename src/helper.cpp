@@ -120,8 +120,8 @@ bool TransitionMeshHandler::check_person_at_loc(const std::string& lndmrk, doubl
     return false;
 }
 
-void TransitionMeshHandler::sample_in_bounds(const std::string& monitored_area, std::vector<Particle> &particles){
-    std::vector<float> bounds_dest = mesh_vert_map_[aoi_to_dest[monitored_area]];
+void TransitionMeshHandler::sample_in_bounds(const std::string& destination_area, std::vector<Particle> &particles){
+    std::vector<float> bounds_dest = mesh_vert_map_[destination_area];
 
     std::random_device rd;  // Seed
     std::mt19937 gen(rd()); // Random number generator

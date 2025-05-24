@@ -38,15 +38,7 @@
 #include "particle_filter_msgs/msg/pose_msg.hpp"
 #include "zed_interfaces/msg/bounding_box3_d.hpp"
 #include "zed_interfaces/msg/object.hpp"
-
 #include <cstdlib>
-
-//enum PersonState {
-//    UNSEEN,  // useen but person still at home
-//    BEDROOM,
-//    OUTDOOR,
-//    FACE_RECOGNIZED
-//};
 
 class ParticleFilterNode : public rclcpp::Node {
 private:
@@ -54,13 +46,14 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_3d_pt;
 
-
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
 
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_k;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_lv;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dw;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_cor;
+
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr person_doorway;
 
     rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr k_label_H;
     rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr lv_label_H;
@@ -71,7 +64,6 @@ private:
     rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr lv_label_F;
     rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr dw_label_F;
     rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr cor_label_F;
-
 
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_outdoor_sub;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bedroom_sub;
@@ -91,15 +83,13 @@ private:
     rclcpp::TimerBase::SharedPtr timer_{nullptr};
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-//    std::map<std::string, std::string> map_cam_aptag;
-//    std::map<std::string, std::string> map_cam_aptag_un;
 
-//    std::vector<bool> door_status_;
     bool door_outdoor;
     bool door_bedroom;
     bool door_bathroom;
     bool ms_bedroom;
     bool ms_corridor;
+
 
     std::vector<int> k_label_h;
     std::vector<int> lv_label_h;
@@ -115,22 +105,13 @@ private:
 // for debug
     bool f_is_h = true;
 
-
-
 public:
+    bool person_at_doorway = false;
     PersonState currentStateH;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publish_person_loc;
 
     bool first_obs = false;
     ParticleFilterNode() : rclcpp::Node("particle_filter"), currentStateH(UNSEEN)  {
-
-//        map_cam_aptag["doorway"] = "tag_" + std::string(std::getenv("tag_doorway")) + "_zed";
-//        map_cam_aptag["kitchen"] = "tag_" + std::string(std::getenv("tag_kitchen")) + "_zed";
-//        map_cam_aptag["dining_room"] = "tag_" + std::string(std::getenv("tag_dining_room")) + "_zed";
-//
-//        map_cam_aptag_un["doorway"] = "aptag_" + std::string(std::getenv("tag_doorway"));
-//        map_cam_aptag_un["kitchen"] = "aptag_" + std::string(std::getenv("tag_kitchen"));
-//        map_cam_aptag_un["dining_room"] = "aptag_" + std::string(std::getenv("tag_dining_room"));
 
         publish_person_loc = this->create_publisher<std_msgs::msg::Float64MultiArray>("person_loc", 10);
 
@@ -160,6 +141,10 @@ public:
 
         pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
                 "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
+                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
+
+        pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+                "/zed_bedroom/zed_node_bedroom/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
 
         pose_sub_cor = create_subscription<zed_interfaces::msg::ObjectsStamped>(
@@ -194,18 +179,23 @@ public:
                 "/kitchen_h_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_Callback(msg); });
 
-//        lv_label_H = create_subscription<std_msgs::msg::Int32>(
-//                "/living_room_h_label", 10,
-//                [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_Callback(msg); });
+        person_doorway = create_subscription<std_msgs::msg::Bool>(
+                "/person_at_doorway", 10,
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { this->person_at_doorway = msg->data; });
+
+        /// WATCH OUT LIVINGROOM CAMERA AT OLSON IS CALLED BEDROOM
 
         lv_label_H = create_subscription<std_msgs::msg::Int32>(
                 "bedroom_h_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_Callback(msg); });
 
-
         dw_label_H = create_subscription<std_msgs::msg::Int32>(
                 "/doorway_h_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_Callback(msg); });
+
+//        dw_label_H = create_subscription<std_msgs::msg::Int32>(
+//                "/bedroom_h_label", 10,
+//                [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_Callback(msg); });
 
         cor_label_H = create_subscription<std_msgs::msg::Int32>(
                 "/cooridor_h_label", 10,
@@ -227,6 +217,10 @@ public:
         dw_label_F = create_subscription<std_msgs::msg::Int32>(
                 "/doorway_s_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_f_Callback(msg); });
+
+//        dw_label_F = create_subscription<std_msgs::msg::Int32>(
+//                "/bedroom_s_label", 10,
+//                [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_f_Callback(msg); });
 
         cor_label_F = create_subscription<std_msgs::msg::Int32>(
                 "/cooridor_s_label", 10,
@@ -348,13 +342,19 @@ public:
 
     // save coordinate map
     // need to change, these are ricks
+//    const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
+//            {"living_room", {-0.5, 0.0, 0.0}},  // x, y, z coordinates
+//            {"bedroom",     {-5.1, -1.7,  0.0}},
+//            {"outside",     {6, -0.7,  0.0}},
+//            {"dining_room", {1.5, 0.0, 0.0}},  // x, y, z coordinates
+//            {"kitchen",     {4, 0,  0.0}},
+//            {"bathroom",     {-4,    0.0,  0.0}},
+//    };
+
     const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
             {"living_room", {-0.5, 0.0, 0.0}},  // x, y, z coordinates
             {"bedroom",     {-5.1, -1.7,  0.0}},
             {"outside",     {6, -0.7,  0.0}},
-            {"dining_room", {1.5, 0.0, 0.0}},  // x, y, z coordinates
-            {"kitchen",     {4, 0,  0.0}},
-            {"bathroom",     {-4,    0.0,  0.0}},
     };
 
     std::array<double, 4> sigma_pos;
@@ -813,7 +813,7 @@ public:
             // get the geometry transform frames
             geometry_msgs::msg::TransformStamped t = tf_buffer_->lookupTransform(
                     toFrame, fromFrame,
-                    tf2::TimePoint(), std::chrono::milliseconds(100000));
+                    tf2::TimePoint(), std::chrono::milliseconds(100));
 
             geometry_msgs::msg::Transform transform_ = t.transform;
 

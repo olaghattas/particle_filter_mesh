@@ -79,8 +79,6 @@ int main(int argc, char **argv) {
     particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
     node->publish_particles(particle_filter.particles);
 //    std::vector<Particle> particles = particle_filter.particles;
-    int count_transp = 0;
-    int limit_transp = 5;
 
     while (rclcpp::ok()) {
         if (not_initialized) {
@@ -104,74 +102,64 @@ int main(int argc, char **argv) {
 
                 // Fill in the message
                 std_msgs::msg::Float64MultiArray message;
-                std::cout << " obs_.name *******  " << obs_.name << std::endl;
+//                std::cout << " obs_.name *******  " << obs_.name << std::endl;
 
 //                node->publish_particles(particle_filter.particles);
 
                 if (obs_.name.empty() ) {
-                    std::cout << " particle_filter.transporte  " << particle_filter.transported << std::endl;
-                    std::cout << " count_transp  " << count_transp << std::endl;
+                    particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
+                    particle_filter.apply_special_transitions(door_status_, node->currentStateH, ms_status_);
 
-                    if(particle_filter.transported && count_transp < limit_transp){
-                        // use old data corresponding to special transition
-                        std::cout << " %%%% waiting  " << std::endl;
+                    // Update the weights and resample
+                    particle_filter.updateWeightsWithoutObs(sigma_landmark);
+                    node->publish_particles(particle_filter.particles);
 
-                        count_transp++;
-                        node->publish_particles(particle_filter.particles);
+//                        std::cout << " updateWeightsWithoutObs  " << std::endl;
 
-                    } else{
-                        particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name, node->currentStateH, ms_status_);
-
-                        // Update the weights and resample
-                        particle_filter.updateWeightsWithoutObs(sigma_landmark);
-                        node->publish_particles(particle_filter.particles);
-
-                        std::cout << " updateWeightsWithoutObs  " << std::endl;
-
-                        double Neff = particle_filter.calculateNeff();
-                        // resample if too few effective particles
+                    double Neff = particle_filter.calculateNeff();
+                    // resample if too few effective particles
 //                        std::cout << " Neff:  " << Neff << std::endl;
 //                        std::cout << " N/3:  " << (particle_filter.num_particles) / 3 << std::endl;
 
-                        if (Neff < particle_filter.num_particles / 3) {
-                            std::cout << " resample due to Neff dropping below 1/3  " << std::endl;
-                            particle_filter.resample();
-                            particle_filter.check_unique_particles();
-                            node->publish_particles(particle_filter.particles);
-
-                        }
-
-                        //  publish location  in the location with the most particles
-                        auto it = node->coordinate_map.find(particle_filter.max_particles_loc);
-                        //  std::cout << "max_loc _ " << particle_filter.max_particles_loc << std::endl;
-
-                        if (it != node->coordinate_map.end()) {
-                            double x = std::get<0>(it->second);
-                            double y = std::get<1>(it->second);
-                            // double z = std::get<2>(it->second);
-
-                            message.data = {x, y};
-
-                            particle_filter.patient_x = x;
-                            particle_filter.patient_y = y;
-
-                        } else {
-                            particle_filter.patient_x = std::nan("");
-                            particle_filter.patient_y = std::nan("");
-                            // Handle the case where the landmark is not found in the map
-                            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Landmark %s not found in the map!",
-                                         particle_filter.max_particles_loc.c_str());
-                        }
+                    if (Neff < particle_filter.num_particles / 3) {
+//                            std::cout << " resample due to Neff dropping below 1/3  " << std::endl;
+                        particle_filter.resample();
+                        particle_filter.check_unique_particles();
+                        node->publish_particles(particle_filter.particles);
 
                     }
 
-                } else {
-                    std::cout << " ((((( observatiopn  " << std::endl;
-                    // only observations undo transportations
-                    particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name, node->currentStateH, ms_status_);
+                    //  publish location  in the location with the most particles
+                    auto it = node->coordinate_map.find(particle_filter.max_particles_loc);
+                    //  std::cout << "max_loc _ " << particle_filter.max_particles_loc << std::endl;
 
-                    particle_filter.transported = false;
-                    count_transp = 0;
+                    if (it != node->coordinate_map.end()) {
+                        double x = std::get<0>(it->second);
+                        double y = std::get<1>(it->second);
+                        // double z = std::get<2>(it->second);
+
+                        message.data = {x, y};
+
+                        particle_filter.patient_x = x;
+                        particle_filter.patient_y = y;
+
+                    } else {
+                        particle_filter.patient_x = std::nan("");
+                        particle_filter.patient_y = std::nan("");
+                        // Handle the case where the landmark is not found in the map
+                        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Landmark %s not found in the map!",
+                                     particle_filter.max_particles_loc.c_str());
+                    }
+
+
+
+                } else {
+//                    std::cout << " ((((( observatiopn  " << std::endl;
+                    // only observations undo transportations
+                    particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
+                    particle_filter.special_transitions_monitoring(door_status_, ms_status_, node->person_at_doorway);
+
+
 
                     std::vector<Observation> observations;
                     observations.push_back(obs_);
@@ -182,7 +170,7 @@ int main(int argc, char **argv) {
 
                     // Update the weights and resample
                     particle_filter.updateWeightsWithObs(sigma_landmark, observations, extrinsicParams );
-                    std::cout << " updateWeightsWithObs  " << std::endl;
+//                    std::cout << " updateWeightsWithObs  " << std::endl;
 
 //                    double Neff = particle_filter.calculateNeff();
 //                    // resample if too few effective particles
@@ -190,7 +178,7 @@ int main(int argc, char **argv) {
 //                    std::cout << " N/3:  " << (particle_filter.num_particles) / 3 << std::endl;
 
 //                    if (Neff < (particle_filter.num_particles) / 3) {
-                    std::cout << " resample  " << std::endl;
+//                    std::cout << " resample  " << std::endl;
 
 //                    node->publish_particles(particle_filter.particles);
                     particle_filter.resample();
@@ -215,7 +203,7 @@ int main(int argc, char **argv) {
                     }
 
                     message.data = {best_particle.x, best_particle.y};
-                    std::cout << "from observation publish_person_loc" << std::endl;
+//                    std::cout << "from observation publish_person_loc" << std::endl;
 
                 }
 
@@ -225,7 +213,7 @@ int main(int argc, char **argv) {
 
 //                node->publish_particles(particle_filter.particles);
                 node->publish_person_loc->publish(message);
-                std::cout << "publish_person_loc" << std::endl;
+//                std::cout << "publish_person_loc" << std::endl;
 
                 //observation camera
             }

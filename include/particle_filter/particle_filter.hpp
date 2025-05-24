@@ -26,6 +26,13 @@ enum PersonState {
     FACE_RECOGNIZED
 };
 
+struct MonitoringDetails {
+    std::string monitored_area;       // name of the area being monitored
+    std::string trigger_sensor;      // can be (ms or ds) indicated what type of sensor triggers the transition (should take motion or door sensor)
+    bool sensor_already_triggered;   // indicates whether sensor was triggered while the person was in the visible area
+    std::chrono::steady_clock::time_point start_time; // time monitoring started
+};
+
 struct Observation {
     std::string name;        // Id of matching landmark. landmark in our case is the joint we are starting with one but later will include all joints
     double x;      // x position of landmark (joint) in world
@@ -56,25 +63,19 @@ private:
 
     TransitionMeshHandler transition_mesh_handler;
     bool monitoring_flag = false;
-    bool obs_during_monitoring = false;
-    bool no_obs_during_monitoring = false;
-    bool door_of_int_open = false;
-    bool ms_of_int_triggered = false;
 
-    // this is added due to the particles jumping back after transpoting them.
-    // since transporting depends on lack of oberservation, the code for no observation messes with
-    // with the logic
     // Random number generator
 //    std::random_device rd;
 //    std::mt19937 gen;
 
 public:
-    bool transported = false;
+
+    MonitoringDetails monitoring_details;
     std::vector<Particle> initial_part_dist;
     double patient_x = std::nan("");
     double patient_y = std::nan("");
 
-    std::string monitoring = "";
+
     // Number of particles to draw
     int num_particles;
     bool no_readings = true;
@@ -122,7 +123,7 @@ public:
 //                      std::vector<bool> doors_status, std::string observation);
 
     void motion_model_noisy(double delta_t, std::array<double, 4> std_pos, double velocity, double yaw_rate,
-                            const std::vector<bool> &doors_status, const std::string &observation, PersonState& person_state, const std::vector<bool> &ms_status);
+                            const std::vector<bool> &doors_status, const std::string &observation);
 
 //    void updateWeights(double std_landmark[],
 //                       std::vector<Observation> observations,
@@ -158,8 +159,9 @@ public:
     void particles_in_range(std::pair<double, double> x_bound, std::pair<double, double> y_bound, int ind_start);
 //    void special_transitions(std::vector<bool> doors_status);
 
-    void special_transitions(const std::vector<bool> &doors_status, PersonState & person_state, const std::vector<bool> &ms_status);
-
+    void reset_monitoringDetails();
+    void apply_special_transitions(const std::vector<bool> &doors_status, PersonState & person_state, const std::vector<bool> &ms_status);
+    void special_transitions_monitoring(const std::vector<bool> &doors_status, const std::vector<bool> &ms_status, bool topic_info);
 
     };
 

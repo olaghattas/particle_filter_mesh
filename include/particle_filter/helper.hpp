@@ -32,12 +32,6 @@ struct Particle {
 
 class TransitionMeshHandler {
 
-private:
-    // maps interest area to dest
-    // the idea is that we are interested in areas where transition can happen
-    // this maps the area of intrest to the potential location
-    std::unordered_map<std::string, std::string> aoi_to_dest = {{"indoor", "outdoor"}, {"corridor", "bedroom"}};
-
 public:
     // constructor
     TransitionMeshHandler();
@@ -54,6 +48,11 @@ public:
     // map door status index to aoi
     std::unordered_map<std::string, int> aoi_to_door = {{"indoor", 2}, {"corridor", 0}};
     std::unordered_map<std::string, int> aoi_to_ms = { {"indoor", 1},{"corridor", 0}};
+
+    // maps interest area to dest
+    // the idea is that we are interested in areas where transition can happen
+    // this maps the area of intrest (aoi) to the potential location
+    std::unordered_map<std::string, std::string> aoi_to_dest = {{"indoor", "outdoor"}, {"corridor", "bedroom"}};
 
     std::string get_dest(std::string aoi);
 };
