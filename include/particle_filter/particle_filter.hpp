@@ -57,10 +57,11 @@ private:
     // Flag, if filter is initialized
     bool is_initialized;
     // Vector of weights of all particles
-    std::vector<double> weights;
+
 
 
 public:
+    std::vector<double> weights;
     bool monitoring_flag = false;
     TransitionMeshHandler transition_mesh_handler;
     MonitoringDetails monitoring_details;

@@ -492,18 +492,6 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
                                            const std::vector<bool> &doors_status, const std::string &observation) {
 
 
-//    std::vector<bool> getdoorstatus() {
-//        // TRUE for closed and False for open
-//        // should align with patrticle filter enforce collision landmarks orderc
-////        bedroom_door, bathroom_door, living_room_door, outside_door
-//        return {door_main, door_bedroom, door_trash, door_back};
-//    }
-//
-//    std::vector<bool> getmsstatus() {
-//        // TRUE for closed and False for open
-//        return {ms_bedroom, ms_trash};
-//    }
-
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
     std::vector<std::string>
             lndmarks = {"obstacles", "main_door", "bedroom_door", "trash_door","backdoor"};

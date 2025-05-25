@@ -56,10 +56,6 @@ ament_target_dependencies(helper_lib ${dependencies1})
 target_include_directories(helper_lib PUBLIC ${EIGEN3_INCLUDE_DIRS})
 target_link_libraries(helper_lib assimp::assimp ${OpenCV_LIBRARIES})
 
-# Ensure particle_filter links with helper_lib
-#target_link_libraries(particle_filter helper_lib)
-
-
 # Add executable
 add_executable(particle_filter_node src/particle_filter_node.cpp)
 ament_target_dependencies(particle_filter_node ${dependencies1})
@@ -67,6 +63,14 @@ target_include_directories(particle_filter_node PUBLIC ${EIGEN3_INCLUDE_DIRS})
 target_include_directories(particle_filter_node PUBLIC ${YAML_CPP_INCLUDE_DIRS})
 target_link_libraries(particle_filter_node yaml-cpp)
 target_link_libraries(particle_filter_node ${OpenCV_LIBRARIES})
+
+# Add executable
+add_executable(initial_dist src/initial_distribution.cpp)
+ament_target_dependencies(initial_dist ${dependencies1})
+target_include_directories(initial_dist PUBLIC ${EIGEN3_INCLUDE_DIRS})
+target_include_directories(initial_dist PUBLIC ${YAML_CPP_INCLUDE_DIRS})
+target_link_libraries(initial_dist yaml-cpp)
+target_link_libraries(initial_dist ${OpenCV_LIBRARIES})
 
 # Add executable
 add_executable(time_checker src/time_checker.cpp)
@@ -85,6 +89,7 @@ target_link_libraries(transformation_test ${OpenCV_LIBRARIES})
 
 # Ensure particle_filter_node links with helper_lib
 target_link_libraries(particle_filter_node helper_lib)
+target_link_libraries(initial_dist helper_lib)
 
 #add_executable(yaml_node src/example_yaml.cpp)
 #target_include_directories(yaml_node PUBLIC ${EIGEN3_INCLUDE_DIRS})
@@ -110,6 +115,11 @@ target_include_directories(particle_filter_node PUBLIC
         ${OpenCV_INCLUDE_DIRS}
         )
 
+target_include_directories(initial_dist PUBLIC
+        ${YAML_CPP_LIBRARIES}
+        ${OpenCV_INCLUDE_DIRS}
+)
+
 target_include_directories(particle_filter PUBLIC
         ${OpenCV_INCLUDE_DIRS}
         )
@@ -129,6 +139,7 @@ install(TARGETS
         transformation_test
         particle_filter
         particle_filter_node
+        initial_dist
         helper_lib
         DESTINATION lib/${PROJECT_NAME}
         ARCHIVE DESTINATION lib

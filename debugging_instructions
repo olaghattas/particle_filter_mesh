@@ -2,6 +2,7 @@ ros2 run nav2_map_server map_server --ros-args -r map:=/map -p yaml_filename:=/h
 ros2 lifecycle set /map_server configure
 ros2 lifecycle set /map_server activate
 
+ros2 run nav2_map_server map_server --ros-args -r map:=/map -p yaml_filename:=/home/olagh48652/Downloads/gaskin_maps/gaskin_final_map.yaml
 
 ros2 launch aptags_tf_broadcast tf_broadcast_helper.launch.py
 
