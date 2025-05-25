@@ -182,7 +182,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
 
 
 
-    auto mesh_file = (pkg_dir / "config" / "olson_collision_mesh.obj").string();
+    auto mesh_file = (pkg_dir / "config" / "gaskin_collision_mesh.obj").string();
 
     auto [mesh_verts, mesh_names] = shr_utils::load_meshes(mesh_file);
     for (int i = 0; i < mesh_names.size(); i++) {
@@ -191,7 +191,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         mesh_vert_map_[name] = verts;
     }
 
-    auto view_points_mesh_file = (pkg_dir / "config" / "view_cam_olson.obj").string();
+    auto view_points_mesh_file = (pkg_dir / "config" / "cam_view_gaskin.obj").string();
 
     auto [view_points_mesh_verts, view_points_mesh_names] = shr_utils::load_meshes(view_points_mesh_file);
     for (int i = 0; i < view_points_mesh_names.size(); i++) {
@@ -200,7 +200,7 @@ void ParticleFilter::init(std::pair<double, double> x_bound, std::pair<double, d
         view_points_mesh_vert_map_[name_mesh] = verts_mesh;
     }
 
-    auto room_mesh_file = (pkg_dir / "config" / "olson_person.obj").string();
+    auto room_mesh_file = (pkg_dir / "config" / "gaskin_person_mesh.obj").string();
 
     auto [room_mesh_verts, room_mesh_names] = shr_utils::load_meshes(room_mesh_file);
     for (int i = 0; i < room_mesh_names.size(); i++) {
@@ -317,67 +317,6 @@ void ParticleFilter::resample() {
 //    add_noise(0.1);
 }
 
-void ParticleFilter::residual_resample() {
-    std::random_device rd;
-    std::mt19937 gen;
-    int N = particles.size();
-    std::vector<Particle> resampled_particles;
-    resampled_particles.reserve(N);
-
-    // Step 1: Compute the number of deterministic copies
-    std::vector<int> num_copies(N);
-    std::vector<double> weights;
-    weights.reserve(N);
-
-    for (const auto& particle : particles) {
-        weights.push_back(particle.weight);
-    }
-
-    for (int i = 0; i < N; ++i) {
-        num_copies[i] = static_cast<int>(std::floor(N * weights[i]));
-    }
-
-    // Step 2: Add deterministic copies
-    for (int i = 0; i < N; ++i) {
-        for (int j = 0; j < num_copies[i]; ++j) {
-            resampled_particles.push_back(particles[i]);
-        }
-    }
-
-    // Step 3: Handle residual weights
-    double total_residual_weight = 0.0;
-    std::vector<double> residual_weights(N);
-    for (int i = 0; i < N; ++i) {
-        residual_weights[i] = weights[i] * N - num_copies[i];
-        total_residual_weight += residual_weights[i];
-    }
-
-    // Normalize residual weights
-    for (auto& residual_weight : residual_weights) {
-        residual_weight /= total_residual_weight;
-    }
-
-    // Step 4: Perform Multinomial Resampling on residuals
-    std::vector<double> cumulative_sum(N, 0.0);
-    std::partial_sum(residual_weights.begin(), residual_weights.end(), cumulative_sum.begin());
-    cumulative_sum.back() = 1.0; // To avoid rounding errors
-
-    std::uniform_real_distribution<double> dist(0.0, 1.0);
-
-    while (resampled_particles.size() < N) {
-        double u = dist(gen);
-        auto it = std::lower_bound(cumulative_sum.begin(), cumulative_sum.end(), u);
-        int index = std::distance(cumulative_sum.begin(), it);
-        resampled_particles.push_back(particles[index]);
-    }
-
-    // Step 5: Update particles with resampled particles
-    particles = resampled_particles;
-
-    // Normalize weights (optional, depending on downstream usage)
-    normalize_weights(std::nan(""));
-}
-
 //If you detect a collapse, you can add small random noise to maintain diversity:
 void ParticleFilter::add_noise(double std_dev) {
     std::random_device rd;
@@ -409,7 +348,7 @@ void ParticleFilter::check_spread() {
     var_x /= num_particles;
     var_y /= num_particles;
 
-    std::cout << "Variance in X: " << var_x << ", Variance in Y: " << var_y << std::endl;
+    //std::cout << "Variance in X: " << var_x << ", Variance in Y: " << var_y << std::endl;
 
     if (var_x < 1e-3 && var_y < 1e-3) {
         std::cout << "Warning: Particles have collapsed to a single location!" << std::endl;
@@ -502,7 +441,7 @@ void ParticleFilter::updateWeightsWithoutObs(double std_landmark[]) {
         Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
 
         // Decrease weight of particle in cam view
-        if (check_particle_at_cam_view("visible_area", point)) {
+        if (check_particle_at_cam_view("cam_view", point)) {
             // TODO: check diff weights
             particles[i].weight = 0;
             //  particles[i].weight = particles[i].weight / 10;
@@ -552,11 +491,24 @@ bool ParticleFilter::check_particle_at_cam_view(const std::string &loc, Eigen::V
 void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_particles,
                                            const std::vector<bool> &doors_status, const std::string &observation) {
 
+
+//    std::vector<bool> getdoorstatus() {
+//        // TRUE for closed and False for open
+//        // should align with patrticle filter enforce collision landmarks orderc
+////        bedroom_door, bathroom_door, living_room_door, outside_door
+//        return {door_main, door_bedroom, door_trash, door_back};
+//    }
+//
+//    std::vector<bool> getmsstatus() {
+//        // TRUE for closed and False for open
+//        return {ms_bedroom, ms_trash};
+//    }
+
     // LANDMARK ORDER SHOULD MATCH DOOR STATUS ORDER
     std::vector<std::string>
-            lndmarks = {"obstacles", "bedroom", "bathroom", "main_door"};
+            lndmarks = {"obstacles", "main_door", "bedroom_door", "trash_door","backdoor"};
 
-    std::vector<std::string> view_point = {"visible_area"};
+    std::vector<std::string> view_point = {"cam_view"};
 
     for (int i = 0; i < num_particles; ++i) {
         Eigen::Vector3d point = {particles[i].x, particles[i].y, -0.5};
@@ -591,8 +543,13 @@ void ParticleFilter::enforce_non_collision(const std::vector<Particle> &old_part
                 particles[i] = old_particles[i];
                 particles[i].weight = 0.0;
             }
+        }else if (check_particle_at(lndmarks[4], point)) {
+            if (doors_status[3]) {
+                particles[i] = old_particles[i];
+                particles[i].weight = 0.0;
+            }
         }
-            // ###### POINTS GOING INTO CAMERA VIEW POINT WHEN NO PERSON IS THERE ########
+                // ###### POINTS GOING INTO CAMERA VIEW POINT WHEN NO PERSON IS THERE ########
             // doesnt allow the particle to go into view points when no observation in camera
 
         else if (observation.empty() && check_particle_at_cam_view(view_point[0], point)) {
@@ -626,7 +583,7 @@ void  ParticleFilter::apply_special_transitions(const std::vector<bool> &doors_s
     auto now = getCurrentTime();
     auto elapsed = std::chrono::duration_cast<std::chrono::minutes>(now - monitoring_details.start_time);
 
-    if (elapsed >= std::chrono::minutes(1)){
+    if (elapsed >= std::chrono::minutes(2)){
         reset_monitoringDetails();
         monitoring_flag = false;
         return;
@@ -650,11 +607,12 @@ void  ParticleFilter::apply_special_transitions(const std::vector<bool> &doors_s
     if (sensor_triggered){
         // transition
         std::string dest = transition_mesh_handler.aoi_to_dest[monitoring_details.monitored_area];
-        if (dest == "outdoor"){
-            person_state = OUTDOOR;
-        }else if(dest == "bedroom"){
+        if (dest == "bedroom_outside"){
             person_state = BEDROOM;
+        }else {
+            person_state = OUTDOOR;
         }
+
         transition_mesh_handler.sample_in_bounds(dest, particles);
         monitoring_flag = false;
         reset_monitoringDetails();
@@ -664,7 +622,7 @@ void  ParticleFilter::apply_special_transitions(const std::vector<bool> &doors_s
 }
 
 
-void  ParticleFilter::special_transitions_monitoring(const std::vector<bool> &doors_status, const std::vector<bool> &ms_status, bool topic_info){
+void  ParticleFilter::special_transitions_monitoring(const std::vector<bool> &doors_status, const std::vector<bool> &ms_status, bool person_doorway){
     // will be called only if there is an observation
     if (isnan(patient_x) && isnan(patient_y)) return;
 
@@ -672,8 +630,10 @@ void  ParticleFilter::special_transitions_monitoring(const std::vector<bool> &do
         std::cout << "Person not currently being monitored. Checking special locations..." << std::endl;
         monitoring_details.monitored_area = transition_mesh_handler.monitor_lndmark(patient_x, patient_y);
 
-        if(topic_info){
-            monitoring_details.monitored_area = "indoor";
+        // overwrite if person_doorway is true
+        // from how getObservation works n=unless there are no observation this will not be triggered
+        if(person_doorway){
+            monitoring_details.monitored_area = "main_inside";
             monitoring_details.trigger_sensor = "ds";
         }
 
@@ -681,29 +641,29 @@ void  ParticleFilter::special_transitions_monitoring(const std::vector<bool> &do
             std::cout << "Monitoring started for area: " << monitoring_details.monitored_area << std::endl;
             monitoring_flag = true;
             monitoring_details.start_time = getCurrentTime();
+
             if (monitoring_details.trigger_sensor.empty()){
                 // todo optimize later
-                if (monitoring_details.monitored_area == "corridor") {
+                if (monitoring_details.monitored_area == "bedroom_inside" || monitoring_details.monitored_area == "trash_inside") {
                     monitoring_details.trigger_sensor = "ms";
                 } else {
                     monitoring_details.trigger_sensor = "ds";
                 }
             }
+
         }
     }
 
     if (monitoring_flag) {
-        // special case since it depends on topic
-//    if (monitoring_details.monitored_area != "indoor"){
-// add the above for tompics at olson there is no topic
-        if (!transition_mesh_handler.check_person_at_loc(monitoring_details.monitored_area, patient_x, patient_y)) {
-//          std::cout << "Person left special area, exiting monitoring." << std::endl;
-            monitoring_flag = false;
-            reset_monitoringDetails();
-//        particles = initial_part_dist;
-            return;
+        // special case since it depends on topic; if the topic turns false by default this will not be triggered
+        if (monitoring_details.monitored_area != "main_inside"){
+            if (!transition_mesh_handler.check_person_at_loc(monitoring_details.monitored_area, patient_x, patient_y)) {
+    //          std::cout << "Person left special area, exiting monitoring." << std::endl;
+                monitoring_flag = false;
+                reset_monitoringDetails();
+                return;
+            }
         }
-//    }
 
         if (!monitoring_details.sensor_already_triggered) {
             if (monitoring_details.trigger_sensor == "ms") {

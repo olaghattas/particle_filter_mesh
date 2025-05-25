@@ -48,69 +48,60 @@ private:
 
     std::map<std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> cameraextrinsics;
 
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_k;
     rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_lv;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_dw;
-    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_cor;
+    rclcpp::Subscription<zed_interfaces::msg::ObjectsStamped>::SharedPtr pose_sub_bd;
 
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr person_doorway;
 
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr k_label_H;
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr lv_label_H;
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr dw_label_H;
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr cor_label_H;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr lv_label_H; // H is the person of interest lv corresponds to living_room (cam location)
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr bd_label_H;
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr lv_label_F; // other person in the house
+    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr bd_label_F;
 
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr k_label_F;
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr lv_label_F;
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr dw_label_F;
-    rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr cor_label_F;
-
-    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_outdoor_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_main_sub;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_bedroom_sub;
-    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_atelier_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_trash_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr door_back_sub;
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr ms_bedroom_sub;
-    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr ms_corr_sub;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr ms_trash_sub;
 
     // Observation observation; // Member variable to store the observation
 
     // to prevent overriding
     // Member variable to store the observation
-    Observation observation_kitchen;
     Observation observation_living;
-    Observation observation_doorway;
-    Observation observation_corridor;
+    Observation observation_backdoor;
+    //topic
+    Observation observation_main_door;
 
     rclcpp::TimerBase::SharedPtr timer_{nullptr};
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 
-    bool door_outdoor;
+    bool door_main;
     bool door_bedroom;
-    bool door_bathroom;
+    bool door_back;
+    bool door_trash;
     bool ms_bedroom;
-    bool ms_corridor;
+    bool ms_trash;
 
 
-    std::vector<int> k_label_h;
     std::vector<int> lv_label_h;
-    std::vector<int> dw_label_h;
-    std::vector<int> coor_label_h;
+    std::vector<int> bd_label_h;
 
-    std::vector<int> k_label_f;
+
     std::vector<int> lv_label_f;
-    std::vector<int> dw_label_f;
-    std::vector<int> coor_label_f;
+    std::vector<int> bd_label_f;
 
 // if true then the labels of howie and suzie will nbe flipped
 // for debug
-    bool f_is_h = true;
+    bool f_is_h = false;
 
 public:
-    bool person_at_doorway = false;
     PersonState currentStateH;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publish_person_loc;
-
     bool first_obs = false;
+
     ParticleFilterNode() : rclcpp::Node("particle_filter"), currentStateH(UNSEEN)  {
 
         publish_person_loc = this->create_publisher<std_msgs::msg::Float64MultiArray>("person_loc", 10);
@@ -118,113 +109,60 @@ public:
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("marker", 10);
 
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-        // olson
-        pose_sub_k = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
-
         pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_bedroom/zed_node_bedroom/body_trk/skeletons", 1,
+                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
                 [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
 
+        pose_sub_bd = create_subscription<zed_interfaces::msg::ObjectsStamped>(
+                "/zed_back_door/zed_node_back_door/body_trk/skeletons", 1,
+                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_backdoor(msg); });
 
-//        pose_sub_k = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-//                "/zed_kitchen/zed_node_kitchen/body_trk/skeletons", 1,
-//                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_kitchen(msg); });
-//
-//        pose_sub_lv = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-//                "/zed_living_room/zed_node_living_room/body_trk/skeletons", 1,
-//                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_living_room(msg); });
 
-        pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_doorway/zed_node_doorway/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
-
-        pose_sub_dw = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_bedroom/zed_node_bedroom/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_doorway(msg); });
-
-        pose_sub_cor = create_subscription<zed_interfaces::msg::ObjectsStamped>(
-                "/zed_corridor/zed_node_corridor/body_trk/skeletons", 1,
-                [this](const zed_interfaces::msg::ObjectsStamped::SharedPtr msg) { PosePixCallback_corridor(msg); });
-
-//        ds1
-        door_outdoor_sub = create_subscription<std_msgs::msg::Bool>(
+        door_main_sub = create_subscription<std_msgs::msg::Bool>(
                 "/sensors_main_door", 10,
-                [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorOutdoorCallback(msg); });
-        // ds2
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorMaindoorCallback(msg); });
+
         door_bedroom_sub = create_subscription<std_msgs::msg::Bool>(
                 "/sensors_bedroom_door", 10,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBedroomCallback(msg); });
-        // ds3
-        door_atelier_sub = create_subscription<std_msgs::msg::Bool>(
-                "/sensors_atelier_door", 10,
-                [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBathroomCallback(msg); });
 
-        // ms1
+        door_trash_sub = create_subscription<std_msgs::msg::Bool>(
+                "/sensors_trash_door", 10,
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorTrashCallback(msg); });
+
+        door_back_sub = create_subscription<std_msgs::msg::Bool>(
+                "/sensors_back_door", 10,
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { DoorBackCallback(msg); });
+
         ms_bedroom_sub = create_subscription<std_msgs::msg::Bool>(
                 "/sensors_motion_bedroom", 10,
                 [this](const std_msgs::msg::Bool::SharedPtr msg) { MSBedroomCallback(msg); });
-        // ms2
-        ms_corr_sub = create_subscription<std_msgs::msg::Bool>(
-                "/sensors_motion_corridor", 10,
-                [this](const std_msgs::msg::Bool::SharedPtr msg) { MSCorridorCallback(msg); });
 
-
-        // todo:  s should be h but for lab testing
-        k_label_H = create_subscription<std_msgs::msg::Int32>(
-                "/kitchen_h_label", 10,
-                [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_Callback(msg); });
+        ms_trash_sub = create_subscription<std_msgs::msg::Bool>(
+                "/sensors_motion_trash", 10,
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { MSTrashCallback(msg); });
 
         person_doorway = create_subscription<std_msgs::msg::Bool>(
                 "/person_at_doorway", 10,
-                [this](const std_msgs::msg::Bool::SharedPtr msg) { this->person_at_doorway = msg->data; });
-
-        /// WATCH OUT LIVINGROOM CAMERA AT OLSON IS CALLED BEDROOM
+                [this](const std_msgs::msg::Bool::SharedPtr msg) { PersonDoorwayCallback(msg); });
 
         lv_label_H = create_subscription<std_msgs::msg::Int32>(
-                "bedroom_h_label", 10,
+                "living_room_h_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_Callback(msg); });
 
-        dw_label_H = create_subscription<std_msgs::msg::Int32>(
-                "/doorway_h_label", 10,
-                [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_Callback(msg); });
-
-//        dw_label_H = create_subscription<std_msgs::msg::Int32>(
-//                "/bedroom_h_label", 10,
-//                [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_Callback(msg); });
-
-        cor_label_H = create_subscription<std_msgs::msg::Int32>(
-                "/cooridor_h_label", 10,
-                [this](const std_msgs::msg::Int32::SharedPtr msg) { cor_label_Callback(msg); });
-
-
-        k_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/kitchen_s_label", 10,
-                [this](const std_msgs::msg::Int32::SharedPtr msg) { k_label_f_Callback(msg); });
-
-//        lv_label_F = create_subscription<std_msgs::msg::Int32>(
-//                "/living_room_s_label", 10,
-//                [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_f_Callback(msg); });
+        bd_label_H = create_subscription<std_msgs::msg::Int32>(
+                "/back_door_h_label", 10,
+                [this](const std_msgs::msg::Int32::SharedPtr msg) { bd_label_Callback(msg); });
 
         lv_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/bedroom_s_label", 10,
+                "/living_room_s_label", 10,
                 [this](const std_msgs::msg::Int32::SharedPtr msg) { lv_label_f_Callback(msg); });
 
-        dw_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/doorway_s_label", 10,
-                [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_f_Callback(msg); });
-
-//        dw_label_F = create_subscription<std_msgs::msg::Int32>(
-//                "/bedroom_s_label", 10,
-//                [this](const std_msgs::msg::Int32::SharedPtr msg) { dw_label_f_Callback(msg); });
-
-        cor_label_F = create_subscription<std_msgs::msg::Int32>(
-                "/cooridor_s_label", 10,
-                [this](const std_msgs::msg::Int32::SharedPtr msg) { cor_label_f_Callback(msg); });
+        bd_label_F = create_subscription<std_msgs::msg::Int32>(
+                "/back_door_s_label", 10,
+                [this](const std_msgs::msg::Int32::SharedPtr msg) { bd_label_f_Callback(msg); });
 
     }
 
@@ -235,23 +173,11 @@ public:
 //        std::cout << "ms_bedroom ->open;" << ms_bedroom << std::endl;
     }
 
-    void MSCorridorCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
+    void MSTrashCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        ms_corridor = msg->data;
+        ms_trash = msg->data;
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "ms_corridor ->open;" << ms_corridor << std::endl;
-    }
-
-    void k_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-//        std::cout << " ######################################################" << std::endl;
-//        k_label_h.push_back(msg->data);
-        if (f_is_h){
-            k_label_f.push_back(msg->data);
-        }else{
-            k_label_h.push_back(msg->data);
-        }
-//        std::cout << "msg->open;" << msg->data << std::endl;
-//        std::cout << "k_label_h " << k_label_h << std::endl;
     }
 
     void lv_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
@@ -266,42 +192,17 @@ public:
 //        std::cout << "lv_label_h " << lv_label_h << std::endl;
     }
 
-    void dw_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+    void bd_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
 //        dw_label_h.push_back(msg->data);
         if (f_is_h){
-            dw_label_f.push_back(msg->data);}
+            bd_label_f.push_back(msg->data);}
         else{
-            dw_label_h.push_back(msg->data);
+            bd_label_h.push_back(msg->data);
         }
 
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "dw_label_h " << dw_label_h << std::endl;
-    }
-
-    void cor_label_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-//        std::cout << " ######################################################" << std::endl;
-//        coor_label_h.push_back(msg->data);
-
-//        if (f_is_h){
-//            coor_label_f.push_back(msg->data);}
-//        else{
-//            coor_label_h.push_back(msg->data);
-//        }
-//        std::cout << "msg->open;" << msg->data << std::endl;
-//        std::cout << "coor_label_h " << coor_label_h << std::endl;
-    }
-
-    void k_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-//        std::cout << " ######################################################" << std::endl;
-//        k_label_f.push_back(msg->data);
-        if (f_is_h){
-            k_label_h.push_back(msg->data);}
-        else{
-            k_label_f.push_back(msg->data);
-        }
-//        std::cout << "msg->open;" << msg->data << std::endl;
-//        std::cout << "k_label_h " << k_label_f << std::endl;
     }
 
     void lv_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
@@ -316,52 +217,31 @@ public:
 //        std::cout << "lv_label_f " << lv_label_f << std::endl;
     }
 
-    void dw_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
+    void bd_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
 //        dw_label_f.push_back(msg->data);
         if (f_is_h){
-            dw_label_h.push_back(msg->data);}
+            bd_label_h.push_back(msg->data);}
         else{
-            dw_label_f.push_back(msg->data);
+            bd_label_f.push_back(msg->data);
         }
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "dw_label_f " << dw_label_f << std::endl;
     }
 
-    void cor_label_f_Callback(const std_msgs::msg::Int32::SharedPtr &msg) {
-//        std::cout << " ######################################################" << std::endl;
-//        coor_label_f.push_back(msg->data);
-//        if (f_is_h){
-//            lv_label_h.push_back(msg->data);}
-//        else{
-//            coor_label_f.push_back(msg->data);
-//        }
-//        std::cout << "msg->open;" << msg->data << std::endl;
-//        std::cout << "coor_label_f " << coor_label_f << std::endl;
-    }
-
-    // save coordinate map
-    // need to change, these are ricks
-//    const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
-//            {"living_room", {-0.5, 0.0, 0.0}},  // x, y, z coordinates
-//            {"bedroom",     {-5.1, -1.7,  0.0}},
-//            {"outside",     {6, -0.7,  0.0}},
-//            {"dining_room", {1.5, 0.0, 0.0}},  // x, y, z coordinates
-//            {"kitchen",     {4, 0,  0.0}},
-//            {"bathroom",     {-4,    0.0,  0.0}},
-//    };
-
+    // in unity coordinates
     const std::unordered_map<std::string, std::tuple<double, double, double>> coordinate_map = {
-            {"living_room", {-0.5, 0.0, 0.0}},  // x, y, z coordinates
-            {"bedroom",     {-5.1, -1.7,  0.0}},
-            {"outside",     {6, -0.7,  0.0}},
+            {"living_room", {-0.73, 0.26, 0.0}},  // x, y, z coordinates
+            {"bedroom",     {-2.94, 4.4,  0.0}},
+            {"outside",     {5.98, 1.1,  0.0}},
+            {"main", {3.8, 1.35, 0.0}}
     };
 
     std::array<double, 4> sigma_pos;
 
-    void DoorOutdoorCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
+    void DoorMaindoorCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
 //        std::cout << " ######################################################" << std::endl;
-        door_outdoor = msg->data;
+        door_main = msg->data;
 //        std::cout << "msg->open;" << msg->data << std::endl;
 //        std::cout << "doorstats->open;" << door_outdoor << std::endl;
     }
@@ -373,9 +253,16 @@ public:
 //        std::cout << "bedoroom doorstats->open;" << door_bedroom << std::endl;
     }
 
-    void DoorBathroomCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
+    void DoorTrashCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
 //        std::cout << "9999999999999999999999999999999999999" << std::endl;
-        door_bathroom = msg->data;
+        door_trash = msg->data;
+//        std::cout << "bsth msg->open;" << msg->data << std::endl;
+//        std::cout << "bedbathoroom doorstats->open;" << door_bathroom << std::endl;
+    }
+
+    void DoorBackCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
+//        std::cout << "9999999999999999999999999999999999999" << std::endl;
+        door_back = msg->data;
 //        std::cout << "bsth msg->open;" << msg->data << std::endl;
 //        std::cout << "bedbathoroom doorstats->open;" << door_bathroom << std::endl;
     }
@@ -384,14 +271,12 @@ public:
         // TRUE for closed and False for open
         // should align with patrticle filter enforce collision landmarks orderc
 //        bedroom_door, bathroom_door, living_room_door, outside_door
-        return {door_bedroom, door_bathroom, door_outdoor};
+        return {door_main, door_bedroom, door_trash, door_back};
     }
 
     std::vector<bool> getmsstatus() {
         // TRUE for closed and False for open
-        // should align with patrticle filter enforce collision landmarks orderc
-//        bedroom_door, bathroom_door, living_room_door, outside_door
-        return {ms_bedroom, ms_corridor};
+        return {ms_bedroom, ms_trash};
     }
 
     Observation getObservation(ParticleFilter& particle_filter) {
@@ -404,7 +289,7 @@ public:
 
         // check if person is detected
         // if person state was unseen ten disperse particles so pf can pick it up
-        if (observation_kitchen.des_pers || observation_doorway.des_pers || observation_living.des_pers || observation_corridor.des_pers){
+        if (observation_backdoor.des_pers || observation_living.des_pers || observation_main_door.des_pers){
             // we have an observation of h
             //        if (currentStateH == OUTDOOR || currentStateH == BEDROOM ){
             // check which one is better
@@ -413,23 +298,18 @@ public:
                 particle_filter.particles = particle_filter.initial_part_dist;
             }
             currentStateH = FACE_RECOGNIZED;
-            if (observation_kitchen.des_pers) {
-                std::cout << "observation_kitchen.des_pers" << observation_kitchen.des_pers << std::endl;
-                return observation_kitchen;
-            }
-            if (observation_doorway.des_pers) {
-                return observation_doorway;
+            if (observation_backdoor.des_pers) {
+                std::cout << "observation_backdoor.des_pers" << observation_backdoor.des_pers << std::endl;
+                return observation_backdoor;
             }
             if (observation_living.des_pers) {
-                std::cout << "observation_living.des_pers" << observation_living.des_pers << std::endl;
                 return observation_living;
             }
-            if (observation_corridor.des_pers) {
-                return observation_corridor;
+            if (observation_main_door.des_pers) {
+                return observation_main_door;
             }
 
         }
-
         Observation selected_observation;
         selected_observation.name = "";
 
@@ -440,146 +320,38 @@ public:
             return selected_observation;
         }
 
-
-        // state 3 h is picked up but not recognized
-        // choose location closest ot prev obse
-//        auto prev = particle_filter.previous_observation_;
-
-        // in map frame so i need to transform obs to map frame then use them
-//        if (!observation_doorway.name.empty() || !observation_kitchen.name.empty()  || !observation_living.name.empty()  || !observation_corridor.name.empty()) {
-            // there is an observation
-
-
-//        if (!std::isnan(prev.first) && !std::isnan(prev.second)) {
-//            // actually have first observation be recognized person
-//            // first_obs = true;
-//            Eigen::Vector4d TransformedPoint;
-//            Eigen::Vector4d homogeneousPoint;
-//            Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams;
-//
-//            if (observation_doorway.name != "") {
-////                euclideanDistance(double x1, double y1, double x2, double y2)
-//                // transform then get euclidean dist to prev
-//                homogeneousPoint << observation_doorway.x, observation_doorway.y, observation_doorway.z, 1.0;
-//                extrinsicParams = cameraextrinsics[observation_doorway.name];
-//
-//                TransformedPoint <<
-//                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
-//                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
-//                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
-//                                 extrinsicParams(0, 3) * homogeneousPoint[3],
-//                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-//                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-//                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-//
-//                // no need check cause here dist is infinity
-//                distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
-//                                                         TransformedPoint[1]);
-//                selected_observation = observation_doorway;
-//
-//            }
-//
-//            if (observation_living.name != "") {
-//
-//                homogeneousPoint << observation_living.x, observation_living.y, observation_living.z, 1.0;
-//
-//                extrinsicParams = cameraextrinsics[observation_living.name];
-//                TransformedPoint <<
-//                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
-//                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
-//                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
-//                                 extrinsicParams(0, 3) * homogeneousPoint[3],
-//                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-//                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-//                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-//
-//                if (distance_to_prev_obs >
-//                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
-//                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
-//                                                             TransformedPoint[1]);
-//                    selected_observation = observation_living;
-//                }
-//            }
-//
-//            if (observation_corridor.name != "") {
-//                homogeneousPoint << observation_corridor.x, observation_corridor.y, observation_corridor.z, 1.0;
-//
-//                extrinsicParams = cameraextrinsics[observation_corridor.name];
-//                TransformedPoint <<
-//                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
-//                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
-//                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
-//                                 extrinsicParams(0, 3) * homogeneousPoint[3],
-//                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-//                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-//                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-//                if (distance_to_prev_obs >
-//                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
-//                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
-//                                                             TransformedPoint[1]);
-//                    selected_observation = observation_corridor;
-//                }
-//            }
-//
-//            if (observation_kitchen.name != "") {
-//                homogeneousPoint << observation_kitchen.x, observation_kitchen.y, observation_kitchen.z, 1.0;
-//
-//                extrinsicParams = cameraextrinsics[observation_kitchen.name];
-//                TransformedPoint <<
-//                                 extrinsicParams(0, 0) * homogeneousPoint[0] +
-//                                 extrinsicParams(0, 1) * homogeneousPoint[1] +
-//                                 extrinsicParams(0, 2) * homogeneousPoint[2] +
-//                                 extrinsicParams(0, 3) * homogeneousPoint[3],
-//                        extrinsicParams(1, 0) * homogeneousPoint[0] + extrinsicParams(1, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(1, 2) * homogeneousPoint[2] + extrinsicParams(1, 3) * homogeneousPoint[3],
-//                        extrinsicParams(2, 0) * homogeneousPoint[0] + extrinsicParams(2, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(2, 2) * homogeneousPoint[2] + extrinsicParams(2, 3) * homogeneousPoint[3],
-//                        extrinsicParams(3, 0) * homogeneousPoint[0] + extrinsicParams(3, 1) * homogeneousPoint[1] +
-//                        extrinsicParams(3, 2) * homogeneousPoint[2] + extrinsicParams(3, 3) * homogeneousPoint[3];
-//                if (distance_to_prev_obs >
-//                    euclideanDistance(prev.first, prev.first, TransformedPoint[0], TransformedPoint[1])) {
-//                    distance_to_prev_obs = euclideanDistance(prev.first, prev.first, TransformedPoint[0],
-//                                                             TransformedPoint[1]);
-//                    selected_observation = observation_kitchen;
-//                }
-//            }
-//        }
-
-
         if (selected_observation.name.empty()){
-
             currentStateH = UNSEEN;
         }
-
         return selected_observation;
 
     }
 
-    void PosePixCallback_kitchen(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        PosePixCallback_generic(msg, "kitchen", k_label_h, k_label_f, observation_kitchen);
+    void PersonDoorwayCallback(const std_msgs::msg::Bool::SharedPtr &msg) {
+        observation_main_door.name = "";
+        observation_main_door.des_pers = false;  // Flag to indicate if it's person h
+
+        if (msg->data){
+            observation_main_door.name = "main_door";
+            observation_main_door.des_pers = true;
+            observation_main_door.x = 3.8;
+            observation_main_door.y = 1.35;
+            observation_main_door.z = 0;
+
+        }
+
+        return;
     }
 
+
+    // TODO observation from topic
     void PosePixCallback_living_room(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
         PosePixCallback_generic(msg, "living_room", lv_label_h, lv_label_f, observation_living);
     }
 
-    void PosePixCallback_corridor(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        PosePixCallback_generic(msg, "corridor", coor_label_h, coor_label_f, observation_corridor);
+    void PosePixCallback_backdoor(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
+        PosePixCallback_generic(msg, "back_door", bd_label_h, bd_label_f, observation_backdoor);
     }
-
-    void PosePixCallback_doorway(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg) {
-        PosePixCallback_generic(msg, "doorway", dw_label_h, dw_label_f, observation_doorway);
-    }
-
 
     // have label_h and label_f as dictionaries
     void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, std::vector<int> &label_h, std::vector<int> &label_f, Observation& obs) {
@@ -634,73 +406,6 @@ public:
         return;
     }
 
-//    void PosePixCallback_generic(const zed_interfaces::msg::ObjectsStamped::SharedPtr &msg, const std::string location, int &label_h, int &label_f, Observation& obs) {
-////        std::cout << " ************** PosePixCallback in " << location << std::endl;
-////
-////        std::cout << " ************** label_h  " << label_h << std::endl;
-////        std::cout << " ************** label_f  " << label_f << std::endl;
-//        // Reset observation
-//        obs.name = "";
-//        obs.des_pers = false;  // Flag to indicate if it's person h
-//
-//        if (msg->objects.empty()) {
-//            return;  // No objects to process
-//        }
-//
-//        // Initially assume no valid observation
-//        bool found_person_h = false;
-//        bool found_person_f = false;
-//        bool found_valid_person = false;
-//        std::vector<zed_interfaces::msg::Object>::size_type fallback_ind = -1;  // Index of the first valid object
-//
-//        // If both labels are empty, take the first observation
-//        if (label_h == -1 && label_f == -1) {
-//            SetObservation(msg->objects[0], false, location, obs);
-//            return;
-//        }
-//
-//        // Process objects to find person h or a valid object
-//        for (std::vector<zed_interfaces::msg::Object>::size_type ind = 0; ind < msg->objects.size(); ++ind) {
-//            const auto &obj = msg->objects[ind];
-//
-////            std::cout << " ************** obj.label_id  " << obj.label_id << std::endl;
-//            if (obj.label_id == label_f) {
-////                std::cout << " ************** obj.label_id  = label_f  " << std::endl;
-//
-//                found_person_f = true;
-//                continue;  // Skip Florence objects
-//            }
-//
-//            if (obj.label_id == label_h) {
-//                found_person_h = true;
-//                SetObservation(obj, true, location, obs);  // It's person h
-//                return;  // Person H found, no need to check further
-//            }
-//
-//            // Store the first valid object (not f or h)
-//            if (!found_valid_person) {
-////                std::cout << " **************  valid perosn obj.label_id  " << obj.label_id << std::endl;
-//
-//                fallback_ind = ind;
-//                found_valid_person = true;
-//            }
-//        }
-//
-//        // Handle cases where person h or f wasn't found
-//        if (label_h != -1) {
-//            label_h = -1;  // Label h is no longer valid
-//        }
-//        if (label_f != -1 && !found_person_f) {
-//            label_f = -1;  // Label f is no longer valid
-//        }
-//
-//        // If person h was not found, fallback to the first valid object
-//        if (found_valid_person) {
-//            SetObservation(msg->objects[fallback_ind], false, location, obs);  // Not person h
-//        }
-//    }
-
-
     // Function to set the observation based on whether it's person h or not
     void SetObservation(const zed_interfaces::msg::Object &obj, bool is_person_h, const std::string &location_name, Observation &obs) {
         obs.name = location_name;
@@ -709,7 +414,7 @@ public:
         SetCentroidAndDimensions(obj, obs);
     }
 
-// Function to calculate centroid and set object dimensions
+    // Function to calculate centroid and set object dimensions
     void SetCentroidAndDimensions(const zed_interfaces::msg::Object &obj, Observation &obs) {
         zed_interfaces::msg::BoundingBox3D bounding_box = obj.bounding_box_3d;
         float sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
@@ -793,8 +498,7 @@ public:
 
     void cam_extrinsics_from_tf() {
 
-//        std::vector<std::string> cams{"dining", "kitchen", "bedroom", "livingroom", "hallway", "doorway"};
-        std::vector<std::string> cams{"kitchen", "doorway", "living_room", "corridor"};
+        std::vector<std::string> cams{"back_door", "living_room"};
 //        std::vector<std::pair<std::string, int>> cams{"zed_kitchen_left_camera_frame"};
 
         // Loop over the keys of map_cam_aptag using a range-based for loop
@@ -829,6 +533,14 @@ public:
                     this->get_logger(), "Could not transform %s to %s: %s",
                     fromFrame.c_str(), toFrame.c_str(), ex.what());
 //            return;
+        }
+    }
+
+    void stop_tf_listener(){
+        if (tf_listener_) {
+            tf_listener_.reset();
+            tf_buffer_.reset();
+            RCLCPP_INFO(this->get_logger(), "TF listener stopped.");
         }
     }
 

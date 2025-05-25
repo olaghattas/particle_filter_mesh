@@ -51,8 +51,8 @@
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<ParticleFilterNode>();
-    auto tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(node);
-    auto tf_static_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(node);
+//    auto tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(node);
+//    auto tf_static_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(node);
 
     std::map <std::string, Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> camera_extrinsics;
     bool first_obs = false;
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
     std::vector<bool> door_status_;
     std::vector<bool> ms_status_;
     double sigma_landmark[3] = {0.04, 0.04, 0.04};
-
+    bool obs_doorway;
     particle_filter.init(x_bound, y_bound, z_bound, theta_bound);
     node->publish_particles(particle_filter.particles);
 //    std::vector<Particle> particles = particle_filter.particles;
@@ -85,18 +85,17 @@ int main(int argc, char **argv) {
             camera_extrinsics = node->get_cam_extrinsic_matrix();
             // make sure camera positions are set
             if (camera_extrinsics.size() != 0) {
+//                node->stop_tf_listener();
                 not_initialized = false;
             }
         } else {
 
+
             door_status_ = node->getdoorstatus();
             ms_status_ = node->getmsstatus();
-
             obs_ = node->getObservation(particle_filter);
             first_obs = node->first_obs;
 
-            // for debug
-//            first_obs = true;
             // NO FIRST OBSERVATION KEEP DISTRIBUTION AS IS
             if (first_obs) {
 
@@ -105,11 +104,11 @@ int main(int argc, char **argv) {
 //                std::cout << " obs_.name *******  " << obs_.name << std::endl;
 
 //                node->publish_particles(particle_filter.particles);
+                particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
 
                 if (obs_.name.empty() ) {
-                    particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
-                    particle_filter.apply_special_transitions(door_status_, node->currentStateH, ms_status_);
 
+                    particle_filter.apply_special_transitions(door_status_, node->currentStateH, ms_status_);
                     // Update the weights and resample
                     particle_filter.updateWeightsWithoutObs(sigma_landmark);
                     node->publish_particles(particle_filter.particles);
@@ -154,64 +153,71 @@ int main(int argc, char **argv) {
 
 
                 } else {
-//                    std::cout << " ((((( observatiopn  " << std::endl;
-                    // only observations undo transportations
-                    particle_filter.motion_model_noisy(delta_t, node->sigma_pos, velocity, yaw_rate, door_status_, obs_.name);
-                    particle_filter.special_transitions_monitoring(door_status_, ms_status_, node->person_at_doorway);
+                    if (obs_.name == "main_door") {
+                        obs_doorway = true;
+                        // sample particles within the main door area
+                        particle_filter.special_transitions_monitoring(door_status_, ms_status_, true);
+
+                        std::string dest = particle_filter.transition_mesh_handler.aoi_to_dest["main_inside"];
+                        particle_filter.transition_mesh_handler.sample_in_bounds(dest, particle_filter.particles);;
+                        node->publish_particles(particle_filter.particles);
+
+                        // publish location in main area
+                        auto it = node->coordinate_map.find("main");
+                        double x = std::get<0>(it->second);
+                        double y = std::get<1>(it->second);
+                        message.data = {x, y};
+                        particle_filter.patient_x = x;
+                        particle_filter.patient_y = y;
 
 
+                    } else {
 
-                    std::vector<Observation> observations;
-                    observations.push_back(obs_);
-
-                    std::string cam_name = obs_.name;
-//                    std::cout << "  cam_name  " << cam_name << std::endl;
-                    auto extrinsicParams = camera_extrinsics[cam_name];
-
-                    // Update the weights and resample
-                    particle_filter.updateWeightsWithObs(sigma_landmark, observations, extrinsicParams );
-//                    std::cout << " updateWeightsWithObs  " << std::endl;
-
-//                    double Neff = particle_filter.calculateNeff();
-//                    // resample if too few effective particles
-//                    std::cout << " Neff:  " << Neff << std::endl;
-//                    std::cout << " N/3:  " << (particle_filter.num_particles) / 3 << std::endl;
-
-//                    if (Neff < (particle_filter.num_particles) / 3) {
-//                    std::cout << " resample  " << std::endl;
-
-//                    node->publish_particles(particle_filter.particles);
-                    particle_filter.resample();
-                    particle_filter.check_unique_particles();
-                    node->publish_particles(particle_filter.particles);
-
-//                    }
-
-                    // publish particle with highest weight
-                    double highest_weight = 0.0;
-
-                    Particle best_particle;
-
-                    for (int i = 0; i < particle_filter.particles.size(); ++i) {
-                        if (particle_filter.particles[i].weight > highest_weight) {
-                            highest_weight = particle_filter.particles[i].weight;
-                            best_particle = particle_filter.particles[i];
-                            particle_filter.patient_x = best_particle.x;
-                            particle_filter.patient_y = best_particle.y;
-
+                        // since we cant stop monitoring with topic by exiting the special area it will be stopped if
+                        // another observation not in main door is triggered
+                        if (particle_filter.monitoring_flag && particle_filter.monitoring_details.monitored_area == "main_inside"){
+                            particle_filter.monitoring_flag = false;
+                            particle_filter.reset_monitoringDetails();
                         }
-                    }
 
-                    message.data = {best_particle.x, best_particle.y};
+
+                        particle_filter.special_transitions_monitoring(door_status_, ms_status_, false);
+                        std::vector<Observation> observations;
+                        observations.push_back(obs_);
+
+                        std::string cam_name = obs_.name;
+//                    std::cout << "  cam_name  " << cam_name << std::endl;
+                        auto extrinsicParams = camera_extrinsics[cam_name];
+
+                        // Update the weights and resample
+                        particle_filter.updateWeightsWithObs(sigma_landmark, observations, extrinsicParams);
+
+                        particle_filter.resample();
+                        particle_filter.check_unique_particles();
+                        node->publish_particles(particle_filter.particles);
+
+                        // publish particle with highest weight
+                        double highest_weight = 0.0;
+
+                        Particle best_particle;
+
+                        for (int i = 0; i < particle_filter.particles.size(); ++i) {
+                            if (particle_filter.particles[i].weight > highest_weight) {
+                                highest_weight = particle_filter.particles[i].weight;
+                                best_particle = particle_filter.particles[i];
+                                particle_filter.patient_x = best_particle.x;
+                                particle_filter.patient_y = best_particle.y;
+
+                            }
+                        }
+
+                        message.data = {best_particle.x, best_particle.y};
 //                    std::cout << "from observation publish_person_loc" << std::endl;
 
+                    }
                 }
-
-                // std::cout << "t.transform.translation.x: " << t.transform.translation.x << std::endl;
-                // std::cout << "t.transform.translation.y: " << t.transform.translation.y << std::endl;
-
-
 //                node->publish_particles(particle_filter.particles);
+                // in unity coordinates
                 node->publish_person_loc->publish(message);
 //                std::cout << "publish_person_loc" << std::endl;
 

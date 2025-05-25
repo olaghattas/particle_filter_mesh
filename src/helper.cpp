@@ -35,7 +35,7 @@ TransitionMeshHandler::TransitionMeshHandler() {
 
 void TransitionMeshHandler::init() {
         std::filesystem::path pkg_dir = ament_index_cpp::get_package_share_directory("particle_filter_mesh");
-        auto mesh_file = (pkg_dir / "config" / "olson_trans.obj").string();
+        auto mesh_file = (pkg_dir / "config" / "gaskin_transitions.obj").string();
 
         auto [mesh_verts, mesh_names] = shr_utils::load_meshes_squares(mesh_file);
         for (int i = 0; i < mesh_names.size(); i++) {
@@ -89,16 +89,6 @@ std::string TransitionMeshHandler::monitor_lndmark(double patient_x, double pati
     }
     return "";
 
-
-    // Looping over keys using an iterator
-//    for (auto it = my_map.begin(); it != my_map.end(); ++it) {
-//        std::cout << "Key: " << it->first << std::endl;  // Access key using it->first
-//    }
-//
-//    // Or using range-based for loop (C++11 and beyond)
-//    for (const auto& pair : my_map) {
-//        std::cout << "Key: " << pair.first << std::endl;  // Access key with pair.first
-//    }
 }
 
 bool TransitionMeshHandler::check_person_at_loc(const std::string& lndmrk, double patient_x, double patient_y){

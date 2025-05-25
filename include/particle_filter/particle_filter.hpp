@@ -54,22 +54,15 @@ inline double dist(double x1, double y1, double x2, double y2) {
 class ParticleFilter {
 private:
 
-
     // Flag, if filter is initialized
     bool is_initialized;
-
     // Vector of weights of all particles
     std::vector<double> weights;
 
-    TransitionMeshHandler transition_mesh_handler;
-    bool monitoring_flag = false;
-
-    // Random number generator
-//    std::random_device rd;
-//    std::mt19937 gen;
 
 public:
-
+    bool monitoring_flag = false;
+    TransitionMeshHandler transition_mesh_handler;
     MonitoringDetails monitoring_details;
     std::vector<Particle> initial_part_dist;
     double patient_x = std::nan("");
@@ -135,7 +128,7 @@ public:
                        std::vector<Observation> observations,
                        Eigen::Matrix<double, 4, 4, Eigen::RowMajor> extrinsicParams);
     void resample();
-    void residual_resample();
+
     double calculateNeff();
     void check_unique_particles();
 

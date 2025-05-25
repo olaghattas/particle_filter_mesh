@@ -46,13 +46,19 @@ public:
 
     std::unordered_map<std::string, std::vector<float>> mesh_vert_map_;
     // map door status index to aoi
-    std::unordered_map<std::string, int> aoi_to_door = {{"indoor", 2}, {"corridor", 0}};
-    std::unordered_map<std::string, int> aoi_to_ms = { {"indoor", 1},{"corridor", 0}};
+    std::unordered_map<std::string, int> aoi_to_door = {{"back_inside", 3},
+                                                        {"main_inside", 0}};
+    std::unordered_map<std::string, int> aoi_to_ms = { {"bedroom_inside", 0},
+                                                       {"trash_inside", 1}};
 
     // maps interest area to dest
     // the idea is that we are interested in areas where transition can happen
     // this maps the area of intrest (aoi) to the potential location
-    std::unordered_map<std::string, std::string> aoi_to_dest = {{"indoor", "outdoor"}, {"corridor", "bedroom"}};
+    std::unordered_map<std::string, std::string> aoi_to_dest = {{"back_inside", "back_outside"},
+                                                                {"bedroom_inside", "bedroom_outside"},
+                                                                {"main_inside", "main_outside"},
+                                                                {"trash_inside", "trash_outside"}
+                                                                };
 
     std::string get_dest(std::string aoi);
 };
