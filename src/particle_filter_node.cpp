@@ -20,7 +20,6 @@
 //#include <geometry_msgs/msg/pose.hpp>
 #include "std_msgs/msg/bool.hpp"
 
-
 #include <Eigen/Dense>
 #include <cv_bridge/cv_bridge.h>
 #include "tf2_ros/transform_listener.h"
@@ -28,7 +27,6 @@
 #include "tf2/exceptions.h"
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
-
 
 #include <random>
 #include <map>
@@ -95,6 +93,10 @@ int main(int argc, char **argv) {
             ms_status_ = node->getmsstatus();
             obs_ = node->getObservation(particle_filter);
             first_obs = node->first_obs;
+
+            // for debugging
+//            first_obs = true;
+//            door_status_ = {1,1,1,1};
 
             // NO FIRST OBSERVATION KEEP DISTRIBUTION AS IS
             if (first_obs) {
