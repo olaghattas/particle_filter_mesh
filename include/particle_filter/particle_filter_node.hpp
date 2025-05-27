@@ -337,7 +337,6 @@ public:
             observation_main_door.x = 3.8;
             observation_main_door.y = 1.35;
             observation_main_door.z = 0;
-
         }
 
         return;

@@ -153,15 +153,14 @@ int main(int argc, char **argv) {
                     }
 
 
-
                 } else {
                     if (obs_.name == "main_door") {
-                        obs_doorway = true;
+
                         // sample particles within the main door area
                         particle_filter.special_transitions_monitoring(door_status_, ms_status_, true);
 
-                        std::string dest = particle_filter.transition_mesh_handler.aoi_to_dest["main_inside"];
-                        particle_filter.transition_mesh_handler.sample_in_bounds(dest, particle_filter.particles);;
+                        particle_filter.transition_mesh_handler.sample_in_bounds("main_inside", particle_filter.particles);
+                        
                         node->publish_particles(particle_filter.particles);
 
                         // publish location in main area
@@ -171,7 +170,6 @@ int main(int argc, char **argv) {
                         message.data = {x, y};
                         particle_filter.patient_x = x;
                         particle_filter.patient_y = y;
-
 
                     } else {
 

@@ -76,6 +76,12 @@ std::string ParticleFilter::find_landmark_with_most_particles() {
             }
         }
     }
+
+    // Print particle counts per landmark
+//    for (const auto &entry : particle_count) {
+//        std::cout << "Landmark: " << entry.first << ", Particle Count: " << entry.second << std::endl;
+//    }
+
     // Find the landmark with the highest number of particles
     auto max_landmark_it = std::max_element(particle_count.begin(), particle_count.end(),
                                             [](const std::pair<std::string, int> &a,
@@ -456,7 +462,6 @@ void ParticleFilter::updateWeightsWithoutObs(double std_landmark[]) {
 
     max_particles_loc = find_landmark_with_most_particles();
     std::cout << "max_loc _ " << max_particles_loc << std::endl;
-
 
 }
 
